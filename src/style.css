@@ -998,7 +998,7 @@ h3 {
   right: 0;
   bottom: 0;
   z-index: 50;
-  width: min(520px, 100%);
+  width: min(720px, 72vw, 100%);
   overflow-y: auto;
   padding: 26px;
   background: #ffffff;
@@ -1210,28 +1210,104 @@ h3 {
 
 .gallery-groups {
   display: grid;
-  gap: 34px;
+  gap: 42px;
 }
 
-.photo-wall-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.photo-wall-card {
-  overflow: hidden;
+.gallery-summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 1px 0 rgba(24, 42, 38, 0.04);
 }
 
-.photo-wall-card button {
+.gallery-summary-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  color: #1c4639;
+  border: 1px solid #d8e7df;
+  border-radius: 8px;
+  background: #f5faf7;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.gallery-year-group {
+  scroll-margin-top: 88px;
+}
+
+.year-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.year-section-heading h3 {
+  margin: 6px 0 0;
+  color: var(--ink);
+  font-size: 30px;
+  line-height: 1.08;
+  word-break: keep-all;
+}
+
+.year-section-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.year-section-stats span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 10px;
+  color: #244d40;
+  border: 1px solid #dce9e2;
+  border-radius: 8px;
+  background: #f7fbf8;
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.year-photo-justified {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #10201c;
+  box-shadow: 0 18px 52px rgba(25, 45, 40, 0.1);
+}
+
+.justified-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.photo-justified-card {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #10201c;
+}
+
+.photo-justified-card button {
   position: relative;
   display: block;
   width: 100%;
-  height: 220px;
+  height: 100%;
   padding: 0;
   overflow: hidden;
   border: 0;
@@ -1239,15 +1315,29 @@ h3 {
   cursor: pointer;
 }
 
-.photo-wall-card button img {
+.photo-justified-card button::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(180deg, rgba(16, 32, 28, 0.02) 38%, rgba(16, 32, 28, 0.78));
+  opacity: 0.88;
+  transition: opacity 0.22s ease;
+}
+
+.photo-justified-card button img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  display: block;
+  object-fit: contain;
   transition: transform 0.26s ease;
 }
 
-.photo-wall-card button:hover img {
+.photo-justified-card button:hover img {
   transform: scale(1.04);
+}
+
+.photo-justified-card button:hover::after {
+  opacity: 0.98;
 }
 
 .photo-category {
@@ -1262,42 +1352,61 @@ h3 {
   font-weight: 820;
 }
 
-.photo-wall-card .photo-category {
+.photo-justified-card .photo-category {
   position: absolute;
   top: 12px;
   left: 12px;
+  z-index: 2;
   box-shadow: 0 8px 20px rgba(9, 24, 22, 0.14);
 }
 
-.photo-card-body {
-  display: grid;
-  gap: 10px;
-  padding: 16px;
-}
-
-.photo-card-body h4 {
-  margin: 0;
-  color: var(--ink);
-  font-size: 18px;
-  line-height: 1.25;
-}
-
-.photo-card-body p {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.photo-meta {
+.photo-collage-info {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  left: 14px;
+  z-index: 2;
   display: grid;
   gap: 5px;
-  color: var(--muted);
-  font-size: 13px;
+  color: #ffffff;
+  text-align: left;
 }
 
-.photo-meta span {
+.photo-collage-info strong {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.photo-collage-info span {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gallery-expand-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  color: #174a38;
+  border: 1px solid #bcd8ca;
+  border-radius: 8px;
+  background: #edf7f1;
+  font-weight: 820;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.gallery-expand-button:hover {
+  border-color: #8fbea7;
+  background: #e0f0e8;
+  transform: translateY(-1px);
 }
 
 .photo-lightbox {
@@ -1456,9 +1565,17 @@ h3 {
   .directory-toolbar,
   .cohort-layout,
   .member-grid,
-  .gallery-layout,
-  .photo-wall-grid {
+  .gallery-layout {
     grid-template-columns: 1fr;
+  }
+
+  .year-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .year-section-stats {
+    justify-content: flex-start;
   }
 
   .people-hero,
@@ -1600,6 +1717,24 @@ h3 {
     height: 230px;
   }
 
+  .gallery-summary-strip {
+    display: grid;
+  }
+
+  .year-section-heading h3 {
+    font-size: 28px;
+  }
+
+  .photo-collage-info {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+  }
+
+  .photo-collage-info strong {
+    font-size: 16px;
+  }
+
   .site-footer {
     flex-direction: column;
     align-items: flex-start;
@@ -1710,8 +1845,13 @@ h3 {
     font-size: 17px;
   }
 
-  .photo-wall-card button {
-    height: 220px;
+  .year-photo-justified {
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .justified-row {
+    gap: 4px;
   }
 
   .photo-lightbox {

@@ -17,8 +17,10 @@ import {
   Sparkles,
   Users,
 } from 'lucide-vue-next'
-import heroGroup from '../assets/lab/hero-group.jpg'
-import { sortedGalleryItems } from '../data/gallery'
+import { sortedGalleryItems } from '../data/gallery/index'
+import { publicAsset } from '../utils/publicAsset'
+
+const heroGroup = publicAsset('gallery/lab/hero-group.jpg')
 
 const researchAreas = [
   {
@@ -203,7 +205,7 @@ const homeGallery = sortedGalleryItems.slice(0, 3)
             <MapPin :size="22" />
             <span>
               <strong>实验室地址</strong>
-              工科楼 N403 / S408
+              信息科技大楼 632 / 工科楼 S408
             </span>
           </p>
         </div>

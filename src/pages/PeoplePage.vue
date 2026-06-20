@@ -7,14 +7,16 @@ import {
   ChevronRight,
   GraduationCap,
   Mail,
+  MapPin,
+  MessageCircle,
   Phone,
   Search,
   Sparkles,
   UserRound,
   X,
 } from 'lucide-vue-next'
-import labLife from '../assets/lab/lab-life.jpg'
-import { cohortOrder, studentProfiles, type StudentProfile, type StudentStatus } from '../data/students'
+import { cohortOrder, studentProfiles, type StudentProfile, type StudentStatus } from '../data/students/index'
+import { publicAsset } from '../utils/publicAsset'
 
 type StatusFilter = 'all' | StudentStatus
 
@@ -22,6 +24,7 @@ const activeCohort = ref('全部')
 const activeStatus = ref<StatusFilter>('all')
 const searchText = ref('')
 const selectedMember = ref<StudentProfile | null>(null)
+const labLife = publicAsset('gallery/lab/lab-life.jpg')
 
 const cohorts = computed(() => ['全部', ...cohortOrder.filter((cohort) => studentProfiles.some((item) => item.cohort === cohort))])
 
@@ -31,7 +34,17 @@ const filteredMembers = computed(() => {
   return studentProfiles.filter((member) => {
     const matchesCohort = activeCohort.value === '全部' || member.cohort === activeCohort.value
     const matchesStatus = activeStatus.value === 'all' || member.status === activeStatus.value
-    const text = [member.name, member.cohort, member.degree, member.role, member.destination, member.email, ...member.research]
+    const text = [
+      member.name,
+      member.cohort,
+      member.degree,
+      member.role,
+      member.nativePlace,
+      member.wechat,
+      member.destination,
+      member.email,
+      ...member.research,
+    ]
       .filter(Boolean)
       .join(' ')
       .toLowerCase()
@@ -105,16 +118,16 @@ function clearSelectedMember() {
     </section>
 
     <section class="people-directory" aria-label="成员列表">
-      <div class="directory-toolbar">
+      <!-- <div class="directory-toolbar">
         <div>
           <p class="section-kicker">Directory</p>
           <h2>按届别浏览成员档案</h2>
         </div>
         <label class="people-search">
           <Search :size="18" />
-          <input v-model="searchText" type="search" placeholder="搜索姓名、方向、邮箱或去向" />
+          <input v-model="searchText" type="search" placeholder="搜索姓名、方向、籍贯、邮箱或去向" />
         </label>
-      </div>
+      </div> -->
 
       <div class="filter-row" aria-label="状态筛选">
         <button type="button" :class="{ active: activeStatus === 'all' }" @click="activeStatus = 'all'">全部</button>
@@ -168,6 +181,10 @@ function clearSelectedMember() {
                       <span>
                         <CalendarDays :size="15" />
                         {{ member.cohort }}
+                      </span>
+                      <span v-if="member.nativePlace">
+                        <MapPin :size="15" />
+                        {{ member.nativePlace }}
                       </span>
                     </div>
                     <p v-if="member.destination" class="destination">
@@ -258,6 +275,14 @@ function clearSelectedMember() {
       </div>
 
       <div class="drawer-contact">
+        <p v-if="selectedMember.nativePlace">
+          <MapPin :size="18" />
+          籍贯：{{ selectedMember.nativePlace }}
+        </p>
+        <p v-if="selectedMember.wechat">
+          <MessageCircle :size="18" />
+          微信：{{ selectedMember.wechat }}
+        </p>
         <a :href="`mailto:${selectedMember.email}`">
           <Mail :size="18" />
           {{ selectedMember.email }}
