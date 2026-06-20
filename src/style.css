@@ -1308,15 +1308,18 @@ h3 {
   grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
   overflow: hidden;
   border-radius: 8px;
-  background: #ffffff;
+  background: linear-gradient(90deg, #10201c 0%, #10201c 60%, #ffffff 60%, #ffffff 100%);
   box-shadow: 0 28px 90px rgba(9, 24, 22, 0.34);
 }
 
 .photo-lightbox > img {
-  width: 100%;
-  height: 100%;
-  min-height: 520px;
-  object-fit: cover;
+  align-self: center;
+  justify-self: center;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(100vh - 64px);
+  object-fit: contain;
   background: #10201c;
 }
 
@@ -1514,11 +1517,15 @@ h3 {
     inset: 18px;
     grid-template-columns: 1fr;
     overflow-y: auto;
+    background: #ffffff;
   }
 
   .photo-lightbox > img {
-    height: 46vh;
-    min-height: 280px;
+    width: auto;
+    height: auto;
+    max-height: 58vh;
+    max-width: 100%;
+    object-fit: contain;
   }
 
   .photo-lightbox-body {
