@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "thumbs": "node scripts/generate-gallery-thumbnails.mjs"
+    "thumbs": "node scripts/generate-gallery-thumbnails.mjs",
+    "optimize:students": "node scripts/optimize-student-photos.mjs"
   },
   "dependencies": {
     "lucide-vue-next": "^0.468.0",

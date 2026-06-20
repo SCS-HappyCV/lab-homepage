@@ -16,10 +16,19 @@ npm run build
 npm run preview
 ```
 
-## 新增或替换原图后，运行：
+## 照片墙缩略图生成
+
+新增或替换原图后，运行：
 
 ```bash
 npm run thumbs
+```
+## 成员照片压缩
+
+新增或替换成员照片后，运行：
+
+```bash
+npm run optimize:students
 ```
 
 构建产物会输出到 `docs/`。如果不使用 GitHub Actions，也可以在 GitHub 仓库的 `Settings -> Pages` 中选择 `Deploy from a branch`，然后把发布目录设置为 `main / docs`。
@@ -131,6 +140,28 @@ photo: studentPhoto('2025', 'yuan-tong.jpg')
 不需要逐张 `import` 图片。`studentPhoto(...)` 会自动根据 GitHub Pages 的部署路径生成正确 URL。未填写照片时，成员页会自动显示姓名缩写头像。
 
 电话和微信属于个人隐私字段，建议仅在本人明确同意后公开。
+
+### 成员照片压缩
+
+成员照片不会像照片墙那样点开查看原图，所以可以直接压缩 `public/students/` 下的原图。新增或替换成员照片后，运行：
+
+```bash
+npm run optimize:students
+```
+
+默认规则是：只处理大于 `800 KB` 的照片，最长边压到 `1200px` 以内，JPEG/WebP 质量为 `82`。脚本会先生成临时文件，只有新文件比原文件更小时才会覆盖原图；小于阈值的照片会自动跳过。
+
+需要调整阈值或尺寸时可以这样运行：
+
+```bash
+npm run optimize:students -- --threshold-kb=600 --max=1000 --quality=80
+```
+
+需要强制重新处理所有成员照片时可以运行：
+
+```bash
+npm run optimize:students -- --force
+```
 
 ## 照片墙维护
 
