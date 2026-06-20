@@ -16,6 +16,12 @@ npm run build
 npm run preview
 ```
 
+## 新增或替换原图后，运行：
+
+```bash
+npm run thumbs
+```
+
 构建产物会输出到 `docs/`。如果不使用 GitHub Actions，也可以在 GitHub 仓库的 `Settings -> Pages` 中选择 `Deploy from a branch`，然后把发布目录设置为 `main / docs`。
 
 ## 成员信息维护
@@ -158,7 +164,7 @@ src/data/gallery/years/2026.ts
   title: '2026 届毕业合影',
   date: '2026-06',
   location: '湘潭大学信息科技大楼',
-  image: labPhoto('2026', 'DSC_1900.JPG'),
+  ...labImage('2026', 'DSC_1900.JPG'),
   featured: true,
 }
 ```
@@ -172,7 +178,8 @@ category  类型，例如 毕业照 / 生活照 / 组会活动 / 比赛参会
 title     照片标题
 date      日期，推荐 YYYY-MM 或 YYYY-MM-DD
 location  地点
-image     图片路径
+image     原图路径，由 labImage 自动生成
+thumbnail 缩略图路径，由 labImage 自动生成
 featured  可选，true 表示可进入首页和照片墙顶部展示
 ```
 
@@ -197,7 +204,7 @@ src/data/gallery/years/2027.ts
 3. 写入基础结构：
 
 ```ts
-import { labPhoto } from '../helpers'
+import { labImage } from '../helpers'
 import type { GalleryItem } from '../types'
 
 export default [
@@ -208,7 +215,7 @@ export default [
     title: '2027 届毕业合影',
     date: '2027-06',
     location: '湘潭大学',
-    image: labPhoto('2027', 'graduation-01.jpg'),
+    ...labImage('2027', 'graduation-01.jpg'),
     featured: true,
   },
 ] satisfies GalleryItem[]
@@ -223,22 +230,55 @@ export default [
 ```text
 public/gallery/lab/2026/DSC_1795.JPG
 public/gallery/lab/2026/DSC_1900.JPG
+public/gallery/lab/2026/thumbs/DSC_1795.webp
 public/gallery/lab/lab-life.jpg
+public/gallery/lab/thumbs/lab-life.webp
 ```
 
 年份目录里的照片这样写：
 
 ```ts
-image: labPhoto('2026', 'DSC_1795.JPG')
+...labImage('2026', 'DSC_1795.JPG')
 ```
 
 通用照片直接放在 `public/gallery/lab/` 下时这样写：
 
 ```ts
-image: labPhoto('lab-life.jpg')
+...labImage('lab-life.jpg')
 ```
 
 同样不需要逐张 `import` 图片。
+
+### 缩略图生成和加载
+
+照片墙默认加载 `thumbnail`，点开照片详情时才加载 `image` 原图。这样 GitHub Pages 上首屏和滚动加载都会轻很多。
+
+新增或替换原图后，运行：
+
+```bash
+npm run thumbs
+```
+
+脚本会自动扫描：
+
+```text
+public/gallery/lab/**/*.jpg
+public/gallery/lab/**/*.JPG
+public/gallery/lab/**/*.png
+```
+
+并生成对应的 webp 缩略图：
+
+```text
+public/gallery/lab/2026/thumbs/DSC_1795.webp
+public/gallery/lab/thumbs/lab-life.webp
+```
+
+缩略图会限制在 `960 x 960` 以内，格式为 webp，质量为 80。再次运行时，如果原图没有变化，会自动跳过已有缩略图；需要强制重新生成时可以运行：
+
+```bash
+npm run thumbs -- --force
+```
 
 ## GitHub Pages 发布
 

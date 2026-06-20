@@ -8,5 +8,6 @@ export interface GalleryItem {
   date: string
   location: string
   image: string
+  thumbnail?: string
   featured?: boolean
 }

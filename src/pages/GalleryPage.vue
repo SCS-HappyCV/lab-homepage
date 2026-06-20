@@ -265,7 +265,13 @@ onBeforeUnmount(() => {
   <main class="gallery-page">
     <section class="gallery-hero" aria-labelledby="gallery-title">
       <div class="gallery-hero-media">
-        <img v-for="item in heroGallery" :key="item.id" :src="item.image" :alt="item.title" />
+        <img
+          v-for="item in heroGallery"
+          :key="item.id"
+          :src="item.thumbnail ?? item.image"
+          :alt="item.title"
+          decoding="async"
+        />
       </div>
       <div class="gallery-hero-overlay"></div>
       <div class="gallery-hero-content">
@@ -361,7 +367,13 @@ onBeforeUnmount(() => {
                   :style="{ width: `${tile.width}px`, height: `${row.height}px` }"
                 >
                   <button type="button" class="photo-card-button" @click="openPhoto(tile.item)">
-                    <img :src="tile.item.image" :alt="tile.item.title" @load="updatePhotoRatio(tile.item, $event)" />
+                    <img
+                      :src="tile.item.thumbnail ?? tile.item.image"
+                      :alt="tile.item.title"
+                      loading="lazy"
+                      decoding="async"
+                      @load="updatePhotoRatio(tile.item, $event)"
+                    />
                     <!-- <span class="photo-category">{{ tile.item.category }}</span> -->
                     <span class="photo-collage-info">
                       <!-- <strong>{{ tile.item.title }}</strong> -->
@@ -399,7 +411,7 @@ onBeforeUnmount(() => {
         <X :size="22" />
       </button>
 
-      <img :src="selectedPhoto.image" :alt="selectedPhoto.title" />
+      <img :src="selectedPhoto.image" :alt="selectedPhoto.title" decoding="async" />
       <div class="photo-lightbox-body">
         <span class="photo-category">{{ selectedPhoto.category }}</span>
         <h2>{{ selectedPhoto.title }}</h2>

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "thumbs": "node scripts/generate-gallery-thumbnails.mjs"
   },
   "dependencies": {
     "lucide-vue-next": "^0.468.0",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.4",
+    "sharp": "^0.35.2",
     "typescript": "~6.0.2",
     "vite": "^5.4.3"
   }

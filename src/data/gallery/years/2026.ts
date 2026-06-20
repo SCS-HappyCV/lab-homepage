@@ -1,4 +1,4 @@
-import { labPhoto } from '../helpers'
+import { labImage } from '../helpers'
 import type { GalleryItem } from '../types'
 
 export default [
@@ -9,7 +9,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学信息科技大楼',
-    image: labPhoto('2026', 'DSC_1795.JPG'),
+    ...labImage('2026', 'DSC_1795.JPG'),
     featured: true,
   },
   {
@@ -19,7 +19,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学工科楼',
-    image: labPhoto('2026', 'DSC_1759.JPG'),
+    ...labImage('2026', 'DSC_1759.JPG'),
     featured: true,
   },
   {
@@ -29,7 +29,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学信息楼',
-    image: labPhoto('2026', 'DSC_1773.JPG'),
+    ...labImage('2026', 'DSC_1773.JPG'),
     featured: true,
   },
   {
@@ -39,7 +39,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学信息楼',
-    image: labPhoto('2026', 'DSC_1780.JPG'),
+    ...labImage('2026', 'DSC_1780.JPG'),
   },
   {
     id: '2026-5',
@@ -48,7 +48,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学信息科技大楼632',
-    image: labPhoto('2026', 'DSC_1838.JPG'),
+    ...labImage('2026', 'DSC_1838.JPG'),
   },
   {
     id: '2026-6',
@@ -57,7 +57,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学信息科技大楼616',
-    image: labPhoto('2026', 'DSC_1850.JPG'),
+    ...labImage('2026', 'DSC_1850.JPG'),
   },
   {
     id: '2026-7',
@@ -66,7 +66,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学信息科技大楼',
-    image: labPhoto('2026', 'DSC_1824.JPG'),
+    ...labImage('2026', 'DSC_1824.JPG'),
   },
   {
     id: '2026-8',
@@ -75,7 +75,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学信息科技大楼',
-    image: labPhoto('2026', 'DSC_1820.JPG'),
+    ...labImage('2026', 'DSC_1820.JPG'),
   },
   {
     id: '2026-9',
@@ -84,7 +84,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学诗词碑',
-    image: labPhoto('2026', '1.jpg'),
+    ...labImage('2026', '1.jpg'),
   },
   {
     id: '2026-10',
@@ -93,7 +93,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学铜像广场',
-    image: labPhoto('2026', '2.jpg'),
+    ...labImage('2026', '2.jpg'),
   },
   {
     id: '2026-11',
@@ -102,7 +102,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学铜像广场',
-    image: labPhoto('2026', '3.jpg'),
+    ...labImage('2026', '3.jpg'),
   },
   {
     id: '2026-12',
@@ -111,7 +111,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学铜像广场',
-    image: labPhoto('2026', '4.jpg'),
+    ...labImage('2026', '4.jpg'),
   },
   {
     id: '2026-13',
@@ -120,7 +120,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学铜像广场',
-    image: labPhoto('2026', '5.jpg'),
+    ...labImage('2026', '5.jpg'),
   },
   {
     id: '2026-14',
@@ -129,7 +129,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学铜像广场',
-    image: labPhoto('2026', '6.jpg'),
+    ...labImage('2026', '6.jpg'),
   },
   {
     id: '2026-15',
@@ -138,7 +138,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学南门',
-    image: labPhoto('2026', '7.jpg'),
+    ...labImage('2026', '7.jpg'),
   },
   {
     id: '2026-16',
@@ -147,7 +147,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学南门',
-    image: labPhoto('2026', '8.jpg'),
+    ...labImage('2026', '8.jpg'),
   },
   {
     id: '2026-17',
@@ -156,7 +156,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学南门',
-    image: labPhoto('2026', '9.jpg'),
+    ...labImage('2026', '9.jpg'),
   },
   {
     id: '2026-18',
@@ -165,7 +165,7 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学南门',
-    image: labPhoto('2026', '10.jpg'),
+    ...labImage('2026', '10.jpg'),
   },
   {
     id: '2026-19',
@@ -174,6 +174,6 @@ export default [
     title: '2026 届毕业合影',
     date: '2026-06',
     location: '湘潭大学三拱门',
-    image: labPhoto('2026', '11.jpg'),
+    ...labImage('2026', '11.jpg'),
   },
 ] satisfies GalleryItem[]

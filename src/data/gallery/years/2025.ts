@@ -1,4 +1,4 @@
-import { labPhoto } from '../helpers'
+import { labImage } from '../helpers'
 import type { GalleryItem } from '../types'
 
 export default [
@@ -9,7 +9,7 @@ export default [
     title: '夏季户外合影',
     date: '2025-06',
     location: '湘潭大学校园',
-    image: labPhoto('lab-life.jpg'),
+    ...labImage('lab-life.jpg'),
     featured: true,
   },
   {
@@ -19,7 +19,7 @@ export default [
     title: '校园生活片段',
     date: '2025-06',
     location: '湘潭大学校园湖畔',
-    image: labPhoto('campus-moment.jpg'),
+    ...labImage('campus-moment.jpg'),
     featured: true,
   },
 ] satisfies GalleryItem[]
