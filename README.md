@@ -16,6 +16,8 @@ npm run build
 npm run preview
 ```
 
+构建产物会输出到 `docs/`。如果不用 GitHub Actions，也可以在 GitHub 仓库的 `Settings -> Pages` 中选择 `Deploy from a branch`，然后把发布目录设置为 `main / docs`。
+
 ## 成员信息维护
 
 团队成员页地址是 `/#/people`，数据集中维护在：
@@ -52,6 +54,6 @@ src/assets/gallery/2024/life-01.jpg
 
 ## GitHub Pages 发布
 
-仓库已经包含 `.github/workflows/deploy.yml`。推送到 `main` 后，在仓库设置里打开 `Settings -> Pages`，将 Source 设置为 `GitHub Actions`。
+仓库已经包含 `.github/workflows/deploy.yml`。推送到 `main` 后，在仓库设置里打开 `Settings -> Pages`，推荐将 Source 设置为 `GitHub Actions`。
 
 `vite.config.ts` 使用 `base: './'`，适合发布到组织根站点或项目子路径。如果后续需要 Vue Router 的 history 模式，再按仓库名显式配置 `base`。
