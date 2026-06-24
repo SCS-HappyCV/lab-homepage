@@ -63,5 +63,5 @@ export function useAuth() {
     }
   }
 
-  return { isMember, authLoaded, verify, logout }
+  return { isMember, verify, logout }
 }

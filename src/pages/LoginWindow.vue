@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Lock, X } from 'lucide-vue-next'
-import { useAuth } from '../composables/useAuth'
+import { useAuth } from '../utils/useAuth'
 
-const props = defineProps<{ visible: boolean }>()
+defineProps<{ visible: boolean }>()
 const emit = defineEmits<{ close: []; success: [] }>()
 
 const { verify } = useAuth()

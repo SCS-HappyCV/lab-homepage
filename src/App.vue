@@ -1,11 +1,24 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
-import { Github, Images, Menu, Users, X } from 'lucide-vue-next'
+import { Github, Images, Lock, LockOpen, Menu, Users, X } from 'lucide-vue-next'
+import { useAuth } from './utils/useAuth'
+import LoginWindow from './pages/LoginWindow.vue'
 
 const router = useRouter()
 const route = useRoute()
 const isMenuOpen = ref(false)
+const showLogin = ref(false)
+
+const { isMember, logout } = useAuth()
+
+function handleLockClick() {
+  if (isMember.value) {
+    logout()
+  } else {
+    showLogin.value = true
+  }
+}
 
 const sectionItems = [
   // { label: '研究方向', id: 'research' },
@@ -85,12 +98,24 @@ function goGallery() {
         >
           {{ item.label }}
         </button>
+        <button
+          class="nav-lock"
+          type="button"
+          :class="{ 'is-member': isMember }"
+          :aria-label="isMember ? '退出成员模式' : '成员身份验证'"
+          @click="handleLockClick"
+        >
+          <LockOpen v-if="isMember" :size="18" />
+          <Lock v-else :size="18" />
+        </button>
         <a class="nav-action" href="https://github.com/Happy-Computer-Vision" target="_blank" rel="noreferrer">
           <Github :size="18" />
           GitHub
         </a>
       </nav>
     </header>
+
+    <LoginWindow :visible="showLogin" @close="showLogin = false" @success="showLogin = false" />
 
     <RouterView />
 
