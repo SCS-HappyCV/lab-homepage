@@ -1,0 +1,24 @@
+{
+  "name": "lab-homepage",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "thumbs": "node scripts/generate-gallery-thumbnails.mjs",
+    "optimize:students": "node scripts/optimize-student-photos.mjs"
+  },
+  "dependencies": {
+    "lucide-vue-next": "^0.468.0",
+    "vue": "^3.4.38",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "sharp": "^0.35.2",
+    "typescript": "~6.0.2",
+    "vite": "^5.4.3"
+  }
+}
