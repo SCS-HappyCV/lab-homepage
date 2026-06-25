@@ -108,7 +108,7 @@ function goGallery() {
           <LockOpen v-if="isMember" :size="18" />
           <Lock v-else :size="18" />
         </button>
-        <a class="nav-action" href="https://github.com/Happy-Computer-Vision" target="_blank" rel="noreferrer">
+        <a class="nav-action" href="https://github.com/SCS-HappyCV" target="_blank" rel="noreferrer">
           <Github :size="18" />
           GitHub
         </a>
