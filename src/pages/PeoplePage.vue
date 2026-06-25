@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronRight,
   GraduationCap,
+  Lock,
   Mail,
   MapPin,
   MessageCircle,
@@ -16,6 +17,7 @@ import {
   X,
 } from 'lucide-vue-next'
 import { cohortOrder, studentProfiles, type StudentProfile, type StudentStatus } from '../data/students/index'
+import { useAuth } from '../utils/useAuth'
 import { publicAsset } from '../utils/publicAsset'
 
 type StatusFilter = 'all' | StudentStatus
@@ -25,6 +27,8 @@ const activeStatus = ref<StatusFilter>('all')
 const searchText = ref('')
 const selectedMember = ref<StudentProfile | null>(null)
 const labLife = publicAsset('gallery/lab/lab-life.jpg')
+
+const { isMember } = useAuth()
 
 const cohorts = computed(() => ['全部', ...cohortOrder.filter((cohort) => studentProfiles.some((item) => item.cohort === cohort))])
 
@@ -182,12 +186,12 @@ function clearSelectedMember() {
                         <CalendarDays :size="15" />
                         {{ member.cohort }}
                       </span>
-                      <span v-if="member.nativePlace">
+                      <span v-if="isMember && member.nativePlace">
                         <MapPin :size="15" />
                         {{ member.nativePlace }}
                       </span>
                     </div>
-                    <p v-if="member.destination" class="destination">
+                    <p v-if="isMember && member.destination" class="destination">
                       <BriefcaseBusiness :size="15" />
                       毕业去向：{{ member.destination }}
                     </p>
@@ -195,14 +199,19 @@ function clearSelectedMember() {
                 </button>
 
                 <div class="member-actions">
-                  <a :href="`mailto:${member.email}`" aria-label="发送邮件">
-                    <Mail :size="17" />
-                  </a>
-                  <a v-if="member.phone" :href="`tel:${member.phone}`" aria-label="拨打电话">
-                    <Phone :size="17" />
-                  </a>
-                  <button v-else type="button" aria-label="电话未公开" disabled>
-                    <Phone :size="17" />
+                  <template v-if="isMember">
+                    <a :href="`mailto:${member.email}`" aria-label="发送邮件">
+                      <Mail :size="17" />
+                    </a>
+                    <a v-if="member.phone" :href="`tel:${member.phone}`" aria-label="拨打电话">
+                      <Phone :size="17" />
+                    </a>
+                    <button v-else type="button" aria-label="电话未公开" disabled>
+                      <Phone :size="17" />
+                    </button>
+                  </template>
+                  <button v-else type="button" aria-label="成员专属" disabled class="locked-hint">
+                    <Lock :size="15" />
                   </button>
                   <button type="button" @click="selectMember(member)">详情</button>
                 </div>
@@ -249,52 +258,60 @@ function clearSelectedMember() {
         </div>
       </div>
 
-      <div class="drawer-section">
-        <h3>代表成果</h3>
-        <ul>
-          <li v-for="item in selectedMember.achievements" :key="item">
-            <Sparkles :size="16" />
-            <span>{{ item }}</span>
-          </li>
-        </ul>
-      </div>
+      <template v-if="isMember">
+        <div class="drawer-section">
+          <h3>代表成果</h3>
+          <ul>
+            <li v-for="item in selectedMember.achievements" :key="item">
+              <Sparkles :size="16" />
+              <span>{{ item }}</span>
+            </li>
+          </ul>
+        </div>
 
-      <div class="drawer-section">
-        <h3>个人经历</h3>
-        <ul>
-          <li v-for="item in selectedMember.experiences" :key="item">
-            <GraduationCap :size="16" />
-            <span>{{ item }}</span>
-          </li>
-        </ul>
-      </div>
+        <div class="drawer-section">
+          <h3>个人经历</h3>
+          <ul>
+            <li v-for="item in selectedMember.experiences" :key="item">
+              <GraduationCap :size="16" />
+              <span>{{ item }}</span>
+            </li>
+          </ul>
+        </div>
 
-      <div v-if="selectedMember.destination" class="drawer-section destination-panel">
-        <h3>毕业去向</h3>
-        <p>{{ selectedMember.destination }}</p>
-      </div>
+        <div v-if="selectedMember.destination" class="drawer-section destination-panel">
+          <h3>毕业去向</h3>
+          <p>{{ selectedMember.destination }}</p>
+        </div>
 
-      <div class="drawer-contact">
-        <p v-if="selectedMember.nativePlace">
-          <MapPin :size="18" />
-          籍贯：{{ selectedMember.nativePlace }}
-        </p>
-        <p v-if="selectedMember.wechat">
-          <MessageCircle :size="18" />
-          微信：{{ selectedMember.wechat }}
-        </p>
-        <a :href="`mailto:${selectedMember.email}`">
-          <Mail :size="18" />
-          {{ selectedMember.email }}
-        </a>
-        <a v-if="selectedMember.phone" :href="`tel:${selectedMember.phone}`">
-          <Phone :size="18" />
-          {{ selectedMember.phone }}
-        </a>
-        <p v-else>
-          <Phone :size="18" />
-          电话未公开
-        </p>
+        <div class="drawer-contact">
+          <p v-if="selectedMember.nativePlace">
+            <MapPin :size="18" />
+            籍贯：{{ selectedMember.nativePlace }}
+          </p>
+          <p v-if="selectedMember.wechat">
+            <MessageCircle :size="18" />
+            微信：{{ selectedMember.wechat }}
+          </p>
+          <a :href="`mailto:${selectedMember.email}`">
+            <Mail :size="18" />
+            {{ selectedMember.email }}
+          </a>
+          <a v-if="selectedMember.phone" :href="`tel:${selectedMember.phone}`">
+            <Phone :size="18" />
+            {{ selectedMember.phone }}
+          </a>
+          <p v-else>
+            <Phone :size="18" />
+            电话未公开
+          </p>
+        </div>
+      </template>
+
+      <div v-else class="drawer-locked">
+        <Lock :size="24" />
+        <p>以下内容仅对实验室成员可见</p>
+        <p class="drawer-locked-hint">请通过导航栏锁图标验证身份</p>
       </div>
     </aside>
   </main>
