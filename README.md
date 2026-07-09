@@ -316,3 +316,82 @@ npm run thumbs -- --force
 仓库已经包含 `.github/workflows/deploy.yml`。推送到 `main` 后，在仓库设置里打开 `Settings -> Pages`，推荐将 Source 设置为 `GitHub Actions`。
 
 `vite.config.ts` 使用 `base: './'`，适合发布到组织根站点或项目子路径。当前路由使用 hash 模式，刷新 `/#/people`、`/#/gallery` 这类页面不会出现 404。
+
+## Member Admin Backend
+
+The people page now reads member records from the backend API first and falls back to the compiled `src/data/students` records if the backend is unavailable.
+
+Frontend API configuration:
+
+```env
+VITE_API_BASE_URL=https://api.scs-happycv.top
+```
+
+For local frontend development, use:
+
+```env
+VITE_API_BASE_URL=http://localhost:3001
+```
+
+### Backend local setup
+
+The backend lives in `server/` and uses Express with SQLite through Node's built-in `node:sqlite` module. Use Node.js 24 or newer for local development and server deployment.
+
+```bash
+cd server
+npm install
+cp .env.example .env
+npm run build
+npm test
+```
+
+Create the backend admin passphrase hash:
+
+```bash
+node -e "console.log(require('node:crypto').createHash('sha256').update('your-passphrase').digest('hex'))"
+```
+
+Put the result in `server/.env`:
+
+```env
+PORT=3001
+ADMIN_PASS_HASH=<sha256-hash>
+JWT_SECRET=<long-random-secret>
+SQLITE_PATH=./data/lab-homepage.db
+CORS_ORIGIN=https://your-github-pages-domain
+```
+
+### Import existing members
+
+Run this once when creating the initial SQLite database:
+
+```bash
+cd server
+npm run db:import
+```
+
+After import, SQLite is the live source of truth. Do not run the import command as a routine sync step unless you intend to update existing database rows from the source files.
+
+### Server deployment with PM2
+
+On the lab server:
+
+```bash
+git clone <repo-url>
+cd LabHomePage/server
+npm install
+cp .env.example .env
+npm run build
+npm run db:import
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+The backend listens on port `3001`. Configure the existing reverse proxy so `https://api.scs-happycv.top` forwards to `http://127.0.0.1:3001`.
+
+Useful checks:
+
+```bash
+curl https://api.scs-happycv.top/health
+pm2 logs lab-homepage-api
+```

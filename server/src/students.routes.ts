@@ -26,8 +26,9 @@ export function createStudentRouter({ repo, authService }: StudentRouterDeps) {
   })
 
   router.put('/students/:id', adminOnly, (req, res) => {
+    const id = String(req.params.id)
     try {
-      const updated = repo.update(req.params.id, withDefaults(req.body, req.params.id))
+      const updated = repo.update(id, withDefaults(req.body, id))
       if (!updated) {
         res.status(404).json({ error: 'Student not found' })
         return
@@ -40,7 +41,8 @@ export function createStudentRouter({ repo, authService }: StudentRouterDeps) {
   })
 
   router.delete('/students/:id', adminOnly, (req, res) => {
-    if (!repo.delete(req.params.id)) {
+    const id = String(req.params.id)
+    if (!repo.delete(id)) {
       res.status(404).json({ error: 'Student not found' })
       return
     }
@@ -60,7 +62,7 @@ function withDefaults(input: Partial<StudentRecord>, forcedId?: string): Student
     cohort: String(input.cohort ?? ''),
     degree: String(input.degree ?? ''),
     role: String(input.role ?? ''),
-    status: input.status === 'alumni' ? 'alumni' : input.status === 'current' ? 'current' : (input.status as StudentRecord['status']),
+    status: normalizeStatus(input.status),
     research: asStringArray(input.research),
     email: String(input.email ?? ''),
     phone: String(input.phone ?? ''),
@@ -79,6 +81,11 @@ function withDefaults(input: Partial<StudentRecord>, forcedId?: string): Student
 
 function asStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+}
+
+function normalizeStatus(value: unknown): StudentRecord['status'] {
+  if (value === 'current' || value === 'alumni') return value
+  return value as StudentRecord['status']
 }
 
 function handleWriteError(error: unknown, res: import('express').Response) {
