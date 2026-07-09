@@ -38,7 +38,26 @@ const apiError = ref('')
 const isLoadingMembers = ref(false)
 const activeCohort = ref(allCohorts)
 const searchText = ref('')
+const statusFilter = ref<'全部' | 'current' | 'alumni'>('全部')
+const cohortSortAsc = ref(true)
+const nameSortAsc = ref(true)
 const selectedMember = ref<StudentProfile | null>(null)
+
+const statusFilterLabels: Record<string, string> = { '全部': '全部', 'current': '在读', 'alumni': '毕业' }
+const statusFilterCycle = ['全部', 'current', 'alumni'] as const
+
+function cycleStatusFilter() {
+  const idx = statusFilterCycle.indexOf(statusFilter.value)
+  statusFilter.value = statusFilterCycle[(idx + 1) % statusFilterCycle.length]
+}
+
+function toggleCohortSort() {
+  cohortSortAsc.value = !cohortSortAsc.value
+}
+
+function toggleNameSort() {
+  nameSortAsc.value = !nameSortAsc.value
+}
 const editorMode = ref<EditorMode>('create')
 const isEditorOpen = ref(false)
 const editorError = ref('')
@@ -94,10 +113,18 @@ const regionData: RegionCity[] = [
 
 const nativeProvince = ref('')
 const nativeCity = ref('')
+const destProvince = ref('')
+const destCity = ref('')
 
 const nativeCities = computed(() => {
   if (!nativeProvince.value) return []
   const region = regionData.find((r) => r.name === nativeProvince.value)
+  return region ? region.cities : []
+})
+
+const destCities = computed(() => {
+  if (!destProvince.value) return []
+  const region = regionData.find((r) => r.name === destProvince.value)
   return region ? region.cities : []
 })
 
@@ -116,6 +143,35 @@ function parseNativePlace(raw: string) {
   }
 }
 
+function parseDestination(raw: string) {
+  destProvince.value = ''
+  destCity.value = ''
+  editorForm.value.destination = ''
+  if (!raw) return
+  const sorted = regionData.map((r) => r.name).sort((a, b) => b.length - a.length)
+  for (const p of sorted) {
+    if (raw.startsWith(p)) {
+      destProvince.value = p
+      const remaining = raw.slice(p.length)
+      const region = regionData.find((r) => r.name === p)
+      if (region) {
+        const citySorted = region.cities.sort((a, b) => b.length - a.length)
+        for (const c of citySorted) {
+          if (remaining.startsWith(c)) {
+            destCity.value = c
+            editorForm.value.destination = remaining.slice(c.length)
+            return
+          }
+        }
+      }
+      editorForm.value.destination = remaining
+      return
+    }
+  }
+  // No province match, treat whole thing as unit name
+  editorForm.value.destination = raw
+}
+
 watch([nativeProvince, nativeCity], () => {
   if (nativeProvince.value) {
     editorForm.value.nativePlace = nativeProvince.value + (nativeCity.value || '')
@@ -125,7 +181,7 @@ watch([nativeProvince, nativeCity], () => {
 })
 
 const cohortOrder = computed(() =>
-  Array.from(new Set(members.value.map((member) => member.cohort))).sort((a, b) => a.localeCompare(b)),
+  Array.from(new Set(members.value.map((member) => member.cohort))).sort((a, b) => b.localeCompare(a)),
 )
 
 const cohorts = computed(() => [allCohorts, ...cohortOrder.value])
@@ -134,6 +190,7 @@ const filteredMembers = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
 
   return members.value.filter((member) => {
+    const matchesStatus = statusFilter.value === '全部' || member.status === statusFilter.value
     const matchesCohort = activeCohort.value === allCohorts || member.cohort === activeCohort.value
     const text = [
       member.name,
@@ -149,20 +206,27 @@ const filteredMembers = computed(() => {
       .join(' ')
       .toLowerCase()
 
-    return matchesCohort && (!keyword || text.includes(keyword))
+    return matchesStatus && matchesCohort && (!keyword || text.includes(keyword))
   })
 })
 
-const groupedMembers = computed(() =>
-  cohortOrder.value
+const groupedMembers = computed(() => {
+  const orderedCohorts = [...cohortOrder.value].sort((a, b) =>
+    cohortSortAsc.value ? a.localeCompare(b) : b.localeCompare(a),
+  )
+
+  return orderedCohorts
     .map((cohort) => ({
       cohort,
       members: filteredMembers.value
         .filter((member) => member.cohort === cohort)
-        .sort((a, b) => a.name.localeCompare(b.name, 'zh')),
+        .sort((a, b) => {
+          const cmp = a.name.localeCompare(b.name, 'zh')
+          return nameSortAsc.value ? cmp : -cmp
+        }),
     }))
-    .filter((group) => group.members.length > 0),
-)
+    .filter((group) => group.members.length > 0)
+})
 
 const stats = computed(() => {
   const alumni = members.value.filter((member) => member.status === 'alumni').length
@@ -211,6 +275,8 @@ function openCreateEditor() {
   editorForm.value = createEmptyForm()
   nativeProvince.value = ''
   nativeCity.value = ''
+  destProvince.value = ''
+  destCity.value = ''
   editorError.value = ''
   isEditorOpen.value = true
 }
@@ -219,6 +285,7 @@ function openEditEditor(member: StudentProfile) {
   editorMode.value = 'edit'
   editorForm.value = toForm(member)
   parseNativePlace(member.nativePlace ?? '')
+  parseDestination(member.destination ?? '')
   editorError.value = ''
   isEditorOpen.value = true
 }
@@ -233,6 +300,13 @@ async function saveMember() {
   isSavingMember.value = true
 
   try {
+    // 合并毕业去向：省+市+单位名称
+    if (editorForm.value.status !== 'current') {
+      const parts = [destProvince.value, destCity.value, editorForm.value.destination].filter(Boolean).join('')
+      editorForm.value.destination = parts
+    } else {
+      editorForm.value.destination = ''
+    }
     const payload = fromForm(editorForm.value)
     if (editorMode.value === 'create') {
       await memberApi.createStudent(payload)
@@ -374,8 +448,30 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-if="isMember" class="filter-row member-admin-bar" aria-label="成员管理">
-        <button class="member-create-btn" type="button" @click="openCreateEditor">
+      <div class="member-admin-bar" aria-label="成员管理">
+        <div class="admin-bar-left">
+          <span class="filter-label">状态</span>
+          <button
+            type="button"
+            class="status-toggle-btn"
+            :class="{ active: statusFilter !== '全部' }"
+            @click="cycleStatusFilter"
+          >{{ statusFilterLabels[statusFilter] }}</button>
+          <span class="filter-label">排序</span>
+          <div class="sort-group">
+            <button
+              type="button"
+              class="sort-btn active"
+              @click="toggleNameSort"
+            >按姓氏{{ nameSortAsc ? ' ↑' : ' ↓' }}</button>
+            <button
+              type="button"
+              class="sort-btn active"
+              @click="toggleCohortSort"
+            >按年级{{ cohortSortAsc ? ' ↑' : ' ↓' }}</button>
+          </div>
+        </div>
+        <button v-if="isMember" class="member-create-btn" type="button" @click="openCreateEditor">
           <Plus :size="20" />
           <span>新增成员</span>
         </button>
@@ -609,16 +705,28 @@ onMounted(() => {
             <input v-model="editorForm.email" type="email" />
           </label>
         </div>
-        <div class="editor-grid">
-          <label>
-            <span>微信</span>
-            <input v-model="editorForm.wechat" type="text" />
-          </label>
-          <label>
-            <span>毕业去向</span>
-            <input v-model="editorForm.destination" type="text" />
+
+        <div v-if="editorForm.status !== 'current'" class="editor-destination">
+          <span class="editor-section-label">毕业去向</span>
+          <div class="editor-grid">
+            <label>
+              <select v-model="destProvince" @change="destCity = ''">
+                <option value="">单位所在省</option>
+                <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
+              </select>
+            </label>
+            <label>
+              <select v-model="destCity" :disabled="!destProvince">
+                <option value="">单位所在市</option>
+                <option v-for="c in destCities" :key="c" :value="c">{{ c }}</option>
+              </select>
+            </label>
+          </div>
+          <label class="editor-destination-unit">
+            <input v-model="editorForm.destination" type="text" placeholder="单位名称" />
           </label>
         </div>
+
         <label>
           <span>研究方向（每行一个）</span>
           <textarea v-model="editorForm.researchText" rows="3"></textarea>
