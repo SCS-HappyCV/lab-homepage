@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import express from 'express'
 import cors from 'cors'
+import { createAuthService, registerAuthRoutes } from './auth.js'
 import { loadConfig } from './config.js'
 import type { ServerConfig } from './types.js'
 
@@ -14,6 +15,7 @@ export function createApp(options: Partial<AppOptions> = {}) {
 
   app.use(cors({ origin: config.corsOrigin === '*' ? true : config.corsOrigin }))
   app.use(express.json({ limit: '1mb' }))
+  registerAuthRoutes(app, createAuthService(config))
 
   app.get('/health', (_req, res) => {
     res.json({ ok: true, service: 'lab-homepage-api' })
