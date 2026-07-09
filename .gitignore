@@ -12,6 +12,8 @@ dist
 dist-ssr
 .screenshots
 *.local
+server/data
+server/dist
 
 # Editor directories and files
 .vscode/*

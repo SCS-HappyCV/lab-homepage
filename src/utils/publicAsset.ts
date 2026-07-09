@@ -1,3 +1,4 @@
 export function publicAsset(path: string) {
-  return `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
+  const baseUrl = import.meta.env?.BASE_URL ?? './'
+  return `${baseUrl}${path.replace(/^\/+/, '')}`
 }
