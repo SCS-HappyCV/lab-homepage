@@ -12,6 +12,7 @@ dist
 dist-ssr
 .screenshots
 *.local
+server/.env
 server/data
 server/dist
 

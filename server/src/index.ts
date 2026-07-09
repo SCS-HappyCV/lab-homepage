@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url'
 import express from 'express'
 import cors from 'cors'
 import { createAuthService, registerAuthRoutes } from './auth.js'
@@ -30,15 +29,4 @@ export function createApp(options: Partial<AppOptions> = {}) {
   })
 
   return app
-}
-
-const isMainModule = process.argv[1] ? fileURLToPath(import.meta.url) === process.argv[1] : false
-
-if (isMainModule) {
-  const config = loadConfig()
-  const app = createApp({ config })
-
-  app.listen(config.port, () => {
-    console.log(`Lab homepage API listening on port ${config.port}`)
-  })
 }
