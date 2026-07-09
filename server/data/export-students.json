@@ -1,0 +1,187 @@
+[
+  {
+    "id": "2025-a",
+    "name": "袁彤",
+    "cohort": "2025",
+    "degree": "硕士研究生",
+    "role": "在读学生",
+    "status": "current",
+    "research": [
+      "高光谱分类"
+    ],
+    "email": "202521633254@smail.xtu.edu.cn",
+    "phone": "",
+    "wechat": "Jack_Alice_",
+    "nativePlace": "湖南邵阳",
+    "photo": "./students/2025/yuan-tong.jpg",
+    "destination": "",
+    "bio": "研究方向为高光谱图像分类。担任实验室2026-2027生活委员。湘大秀才。",
+    "achievements": [
+      "湘潭大学十佳歌手",
+      "湘大杯篮球比赛亚军",
+      "湘大杯足球比赛亚军",
+      "湘大杯气排球比赛亚军",
+      "湘潭大学校运会5000米冠军",
+      "湘潭大学超级演说家"
+    ],
+    "experiences": [
+      "2021-2025 湘潭大学计算机科学与技术专业学习",
+      "2025 湘潭大学计算机科学与技术专业攻读硕士学位"
+    ],
+    "sortOrder": 0,
+    "createdAt": "2026-07-09T05:57:07.623Z",
+    "updatedAt": "2026-07-09T05:57:07.623Z"
+  },
+  {
+    "id": "2025-b",
+    "name": "2025届成员 B",
+    "cohort": "2025",
+    "degree": "硕士研究生",
+    "role": "在读学生",
+    "status": "current",
+    "research": [
+      "三维感知",
+      "点云理解"
+    ],
+    "email": "student2025b@example.com",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "destination": "",
+    "bio": "关注三维场景理解与点云语义分析，参与水利与复杂室外场景相关研究。",
+    "achievements": [
+      "参与三维语义分割实验",
+      "完成点云数据处理流程建设"
+    ],
+    "experiences": [
+      "2023-至今 三维视觉方向研究",
+      "2024 参与实验室场景数据采集与标注"
+    ],
+    "sortOrder": 0,
+    "createdAt": "2026-07-09T08:19:44.648Z",
+    "updatedAt": "2026-07-09T08:19:44.648Z"
+  },
+  {
+    "id": "2024-a",
+    "name": "2024届成员 A",
+    "cohort": "2024",
+    "degree": "硕士",
+    "role": "毕业生",
+    "status": "alumni",
+    "research": [
+      "图像增强",
+      "视觉检测"
+    ],
+    "email": "alumni2024a@example.com",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "destination": "某科技企业算法工程师",
+    "bio": "在校期间主要参与视觉检测和图像增强相关项目，毕业后从事算法工程工作。",
+    "achievements": [
+      "参与视觉检测方向研究",
+      "参与企业合作项目实践"
+    ],
+    "experiences": [
+      "2021-2024 实验室硕士阶段学习",
+      "2023 参与视觉检测系统开发"
+    ],
+    "sortOrder": 0,
+    "createdAt": "2026-07-09T07:14:06.728Z",
+    "updatedAt": "2026-07-09T07:14:06.728Z"
+  },
+  {
+    "id": "2023-a",
+    "name": "伍志明",
+    "cohort": "2023",
+    "degree": "硕士",
+    "role": "毕业生",
+    "status": "alumni",
+    "research": [
+      "变化检测"
+    ],
+    "email": "zhimingwu2022@126.com",
+    "phone": "13160595803",
+    "wechat": "w384z756m",
+    "nativePlace": "湖南耒阳",
+    "photo": "./students/2023/wu-zhiming.jpg",
+    "destination": "长沙万兴科技有限公司",
+    "bio": "在校期间关注水利遥感图像变化检测，建设了数据集 RLB-CD。担任实验室2024-2025生活委员。",
+    "achievements": [
+      "Mamba-LiteDSN: Lightweight Dual-Stream Network for Efficient Remote Sensing Change Detection. IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing. 中科院二区. JCR Q1.在投",
+      "第七届“华为杯”中国研究生人工智能创新大赛全国二等奖",
+      "一种融合Mamba增强的双流遥感影像变化检测方法.发明专利.已授权",
+      "第六届湖南省研究生人工智能创新大赛二等奖"
+    ],
+    "experiences": [
+      "2019-2023 湖南中医药大学计算机科学与技术专业学习",
+      "2023-2026 湘潭大学计算机技术专业攻读硕士学位",
+      "2026 入职长沙万兴科技有限公司研发岗位"
+    ],
+    "sortOrder": 0,
+    "createdAt": "2026-07-09T07:13:29.788Z",
+    "updatedAt": "2026-07-09T07:13:29.788Z"
+  },
+  {
+    "id": "2024-b",
+    "name": "2024届成员 B",
+    "cohort": "2024",
+    "degree": "硕士",
+    "role": "毕业生",
+    "status": "alumni",
+    "research": [
+      "语义分割",
+      "遥感视觉"
+    ],
+    "email": "alumni2024b@example.com",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "destination": "继续攻读博士学位",
+    "bio": "毕业课题聚焦复杂场景语义分割，毕业后继续开展视觉智能相关研究。",
+    "achievements": [
+      "参与语义分割数据集建设",
+      "完成毕业论文与实验复现材料"
+    ],
+    "experiences": [
+      "2021-2024 实验室硕士阶段学习",
+      "2024 进入博士阶段继续深造"
+    ],
+    "sortOrder": 1,
+    "createdAt": "2026-07-09T05:57:07.641Z",
+    "updatedAt": "2026-07-09T05:57:07.641Z"
+  },
+  {
+    "id": "2024-c",
+    "name": "2024届成员 C",
+    "cohort": "2024",
+    "degree": "硕士",
+    "role": "毕业生",
+    "status": "alumni",
+    "research": [
+      "语义分割",
+      "遥感视觉"
+    ],
+    "email": "alumni2024c@example.com",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "destination": "继续攻读博士学位",
+    "bio": "毕业课题聚焦复杂场景语义分割，毕业后继续开展视觉智能相关研究。",
+    "achievements": [
+      "参与语义分割数据集建设",
+      "完成毕业论文与实验复现材料"
+    ],
+    "experiences": [
+      "2021-2024 实验室硕士阶段学习",
+      "2024 进入博士阶段继续深造"
+    ],
+    "sortOrder": 2,
+    "createdAt": "2026-07-09T05:57:07.645Z",
+    "updatedAt": "2026-07-09T05:57:07.645Z"
+  }
+]

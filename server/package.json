@@ -8,7 +8,9 @@
     "start": "node dist/src/server.js",
     "dev": "tsx watch src/server.ts",
     "test": "tsx --test test/**/*.test.ts",
-    "db:import": "tsx scripts/import-students.ts"
+    "db:import": "tsx scripts/import-students.ts",
+    "db:export": "tsx scripts/export-students.ts",
+    "db:import-json": "tsx scripts/import-json.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
