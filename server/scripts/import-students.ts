@@ -16,7 +16,6 @@ interface FrontendStudent {
   name: string
   cohort: string
   degree: string
-  role: string
   status: 'current' | 'alumni'
   research: string[]
   email: string
@@ -67,7 +66,6 @@ function toRecord(student: FrontendStudent, sortOrder: number): StudentRecord {
     name: student.name,
     cohort: student.cohort,
     degree: student.degree,
-    role: student.role,
     status: student.status,
     research: student.research ?? [],
     email: student.email,

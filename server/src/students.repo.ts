@@ -11,10 +11,6 @@ const requiredTextFields: Array<keyof StudentRecord> = [
   'id',
   'name',
   'cohort',
-  'degree',
-  'role',
-  'email',
-  'bio',
 ]
 
 export class StudentValidationError extends Error {
@@ -49,16 +45,15 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
 
       db.prepare(
         `INSERT INTO students (
-          id, name, cohort, degree, role, status, research, email, phone, wechat,
+          id, name, cohort, degree, status, research, email, phone, wechat,
           nativePlace, photo, destination, bio, achievements, experiences,
           sortOrder, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         row.id,
         row.name,
         row.cohort,
         row.degree,
-        row.role,
         row.status,
         row.research,
         row.email,
@@ -86,7 +81,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
 
       db.prepare(
         `UPDATE students SET
-          name = ?, cohort = ?, degree = ?, role = ?, status = ?, research = ?,
+          name = ?, cohort = ?, degree = ?, status = ?, research = ?,
           email = ?, phone = ?, wechat = ?, nativePlace = ?, photo = ?,
           destination = ?, bio = ?, achievements = ?, experiences = ?,
           sortOrder = ?, createdAt = ?, updatedAt = ?
@@ -95,7 +90,6 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         row.name,
         row.cohort,
         row.degree,
-        row.role,
         row.status,
         row.research,
         row.email,
@@ -145,7 +139,6 @@ function normalizeStudent(student: StudentRecord): StudentRecord {
     name: student.name.trim(),
     cohort: student.cohort.trim(),
     degree: student.degree.trim(),
-    role: student.role.trim(),
     email: student.email.trim(),
     bio: student.bio.trim(),
     research: normalizeArray(student.research),

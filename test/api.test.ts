@@ -8,7 +8,6 @@ const sampleStudent: StudentProfile = {
   name: 'Li Si',
   cohort: '2026',
   degree: 'Master',
-  role: 'Student',
   status: 'current',
   research: ['Vision'],
   email: 'lisi@example.com',

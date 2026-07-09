@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   Award,
   BriefcaseBusiness,
-  CalendarDays,
   ChevronRight,
   GraduationCap,
   Lock,
@@ -25,7 +24,6 @@ import { memberApi } from '../utils/api'
 import { useAuth } from '../utils/useAuth'
 import { publicAsset } from '../utils/publicAsset'
 
-type StatusFilter = 'all' | StudentStatus
 type EditorMode = 'create' | 'edit'
 type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experiences'> & {
   researchText: string
@@ -39,7 +37,6 @@ const members = ref<StudentProfile[]>(studentProfiles)
 const apiError = ref('')
 const isLoadingMembers = ref(false)
 const activeCohort = ref(allCohorts)
-const activeStatus = ref<StatusFilter>('all')
 const searchText = ref('')
 const selectedMember = ref<StudentProfile | null>(null)
 const editorMode = ref<EditorMode>('create')
@@ -50,6 +47,82 @@ const editorForm = ref<MemberForm>(createEmptyForm())
 const labLife = publicAsset('gallery/lab/lab-life.jpg')
 
 const { isMember } = useAuth()
+
+// ---- 籍贯级联选择 ----
+
+interface RegionCity {
+  name: string
+  cities: string[]
+}
+
+const regionData: RegionCity[] = [
+  { name: '北京', cities: ['东城区', '西城区', '朝阳区', '丰台区', '石景山区', '海淀区', '顺义区', '通州区', '大兴区', '房山区', '昌平区', '怀柔区', '密云区', '延庆区', '平谷区', '门头沟区'] },
+  { name: '天津', cities: ['和平区', '河东区', '河西区', '南开区', '河北区', '红桥区', '东丽区', '西青区', '津南区', '北辰区', '武清区', '宝坻区', '滨海新区', '宁河区', '静海区', '蓟州区'] },
+  { name: '上海', cities: ['黄浦区', '徐汇区', '长宁区', '静安区', '普陀区', '虹口区', '杨浦区', '浦东新区', '闵行区', '宝山区', '嘉定区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区'] },
+  { name: '重庆', cities: ['万州区', '涪陵区', '渝中区', '大渡口区', '江北区', '沙坪坝区', '九龙坡区', '南岸区', '北碚区', '綦江区', '大足区', '渝北区', '巴南区', '黔江区', '长寿区', '江津区', '合川区', '永川区', '南川区', '璧山区', '铜梁区', '潼南区', '荣昌区', '开州区', '梁平区', '武隆区'] },
+  { name: '河北', cities: ['石家庄', '唐山', '秦皇岛', '邯郸', '邢台', '保定', '张家口', '承德', '沧州', '廊坊', '衡水'] },
+  { name: '山西', cities: ['太原', '大同', '阳泉', '长治', '晋城', '朔州', '晋中', '运城', '忻州', '临汾', '吕梁'] },
+  { name: '内蒙古', cities: ['呼和浩特', '包头', '乌海', '赤峰', '通辽', '鄂尔多斯', '呼伦贝尔', '巴彦淖尔', '乌兰察布', '兴安盟', '锡林郭勒', '阿拉善'] },
+  { name: '辽宁', cities: ['沈阳', '大连', '鞍山', '抚顺', '本溪', '丹东', '锦州', '营口', '阜新', '辽阳', '盘锦', '铁岭', '朝阳', '葫芦岛'] },
+  { name: '吉林', cities: ['长春', '吉林', '四平', '辽源', '通化', '白山', '松原', '白城', '延边'] },
+  { name: '黑龙江', cities: ['哈尔滨', '齐齐哈尔', '鸡西', '鹤岗', '双鸭山', '大庆', '伊春', '佳木斯', '七台河', '牡丹江', '黑河', '绥化', '大兴安岭'] },
+  { name: '江苏', cities: ['南京', '无锡', '徐州', '常州', '苏州', '南通', '连云港', '淮安', '盐城', '扬州', '镇江', '泰州', '宿迁'] },
+  { name: '浙江', cities: ['杭州', '宁波', '温州', '嘉兴', '湖州', '绍兴', '金华', '衢州', '舟山', '台州', '丽水'] },
+  { name: '安徽', cities: ['合肥', '芜湖', '蚌埠', '淮南', '马鞍山', '淮北', '铜陵', '安庆', '黄山', '滁州', '阜阳', '宿州', '六安', '亳州', '池州', '宣城'] },
+  { name: '福建', cities: ['福州', '厦门', '莆田', '三明', '泉州', '漳州', '南平', '龙岩', '宁德'] },
+  { name: '江西', cities: ['南昌', '景德镇', '萍乡', '九江', '新余', '鹰潭', '赣州', '吉安', '宜春', '抚州', '上饶'] },
+  { name: '山东', cities: ['济南', '青岛', '淄博', '枣庄', '东营', '烟台', '潍坊', '济宁', '泰安', '威海', '日照', '临沂', '德州', '聊城', '滨州', '菏泽'] },
+  { name: '河南', cities: ['郑州', '开封', '洛阳', '平顶山', '安阳', '鹤壁', '新乡', '焦作', '濮阳', '许昌', '漯河', '三门峡', '南阳', '商丘', '信阳', '周口', '驻马店', '济源'] },
+  { name: '湖北', cities: ['武汉', '黄石', '十堰', '宜昌', '襄阳', '鄂州', '荆门', '孝感', '荆州', '黄冈', '咸宁', '随州', '恩施', '仙桃', '潜江', '天门', '神农架'] },
+  { name: '湖南', cities: ['长沙', '株洲', '湘潭', '衡阳', '邵阳', '岳阳', '常德', '张家界', '益阳', '郴州', '永州', '怀化', '娄底', '湘西'] },
+  { name: '广东', cities: ['广州', '韶关', '深圳', '珠海', '汕头', '佛山', '江门', '湛江', '茂名', '肇庆', '惠州', '梅州', '汕尾', '河源', '阳江', '清远', '东莞', '中山', '潮州', '揭阳', '云浮'] },
+  { name: '广西', cities: ['南宁', '柳州', '桂林', '梧州', '北海', '防城港', '钦州', '贵港', '玉林', '百色', '贺州', '河池', '来宾', '崇左'] },
+  { name: '海南', cities: ['海口', '三亚', '三沙', '儋州', '五指山', '琼海', '文昌', '万宁', '东方', '定安', '屯昌', '澄迈', '临高', '白沙', '昌江', '乐东', '陵水', '保亭', '琼中'] },
+  { name: '四川', cities: ['成都', '自贡', '攀枝花', '泸州', '德阳', '绵阳', '广元', '遂宁', '内江', '乐山', '南充', '眉山', '宜宾', '广安', '达州', '雅安', '巴中', '资阳', '阿坝', '甘孜', '凉山'] },
+  { name: '贵州', cities: ['贵阳', '六盘水', '遵义', '安顺', '毕节', '铜仁', '黔西南', '黔东南', '黔南'] },
+  { name: '云南', cities: ['昆明', '曲靖', '玉溪', '保山', '昭通', '丽江', '普洱', '临沧', '楚雄', '红河', '文山', '西双版纳', '大理', '德宏', '怒江', '迪庆'] },
+  { name: '西藏', cities: ['拉萨', '日喀则', '昌都', '林芝', '山南', '那曲', '阿里'] },
+  { name: '陕西', cities: ['西安', '铜川', '宝鸡', '咸阳', '渭南', '延安', '汉中', '榆林', '安康', '商洛'] },
+  { name: '甘肃', cities: ['兰州', '嘉峪关', '金昌', '白银', '天水', '武威', '张掖', '平凉', '酒泉', '庆阳', '定西', '陇南', '临夏', '甘南'] },
+  { name: '青海', cities: ['西宁', '海东', '海北', '黄南', '海南', '果洛', '玉树', '海西'] },
+  { name: '宁夏', cities: ['银川', '石嘴山', '吴忠', '固原', '中卫'] },
+  { name: '新疆', cities: ['乌鲁木齐', '克拉玛依', '吐鲁番', '哈密', '昌吉', '博尔塔拉', '巴音郭楞', '阿克苏', '克孜勒苏', '喀什', '和田', '伊犁', '塔城', '阿勒泰', '石河子'] },
+  { name: '香港', cities: ['中西区', '湾仔区', '东区', '南区', '油尖旺区', '深水埗区', '九龙城区', '黄大仙区', '观塘区', '荃湾区', '屯门区', '元朗区', '北区', '大埔区', '西贡区', '沙田区', '葵青区', '离岛区'] },
+  { name: '澳门', cities: ['花地玛堂区', '圣安多尼堂区', '大堂区', '望德堂区', '风顺堂区', '嘉模堂区', '圣方济各堂区'] },
+  { name: '台湾', cities: ['台北', '高雄', '新北', '台中', '台南', '桃园', '新竹', '基隆', '嘉义', '彰化', '屏东', '宜兰', '花莲', '台东', '澎湖', '金门', '连江'] },
+]
+
+const nativeProvince = ref('')
+const nativeCity = ref('')
+
+const nativeCities = computed(() => {
+  if (!nativeProvince.value) return []
+  const region = regionData.find((r) => r.name === nativeProvince.value)
+  return region ? region.cities : []
+})
+
+function parseNativePlace(raw: string) {
+  nativeProvince.value = ''
+  nativeCity.value = ''
+  if (!raw) return
+  // Match the longest known province from the start
+  const sorted = regionData.map((r) => r.name).sort((a, b) => b.length - a.length)
+  for (const p of sorted) {
+    if (raw.startsWith(p)) {
+      nativeProvince.value = p
+      nativeCity.value = raw.slice(p.length)
+      return
+    }
+  }
+}
+
+watch([nativeProvince, nativeCity], () => {
+  if (nativeProvince.value) {
+    editorForm.value.nativePlace = nativeProvince.value + (nativeCity.value || '')
+  } else {
+    editorForm.value.nativePlace = ''
+  }
+})
 
 const cohortOrder = computed(() =>
   Array.from(new Set(members.value.map((member) => member.cohort))).sort((a, b) => b.localeCompare(a)),
@@ -62,12 +135,10 @@ const filteredMembers = computed(() => {
 
   return members.value.filter((member) => {
     const matchesCohort = activeCohort.value === allCohorts || member.cohort === activeCohort.value
-    const matchesStatus = activeStatus.value === 'all' || member.status === activeStatus.value
     const text = [
       member.name,
       member.cohort,
       member.degree,
-      member.role,
       member.nativePlace,
       member.wechat,
       member.destination,
@@ -78,7 +149,7 @@ const filteredMembers = computed(() => {
       .join(' ')
       .toLowerCase()
 
-    return matchesCohort && matchesStatus && (!keyword || text.includes(keyword))
+    return matchesCohort && (!keyword || text.includes(keyword))
   })
 })
 
@@ -104,7 +175,7 @@ const stats = computed(() => {
 })
 
 function statusLabel(status: StudentStatus) {
-  return status === 'current' ? 'Current' : 'Alumni'
+  return status === 'current' ? '在读' : '毕业'
 }
 
 function initials(name: string) {
@@ -136,6 +207,8 @@ async function loadMembers() {
 function openCreateEditor() {
   editorMode.value = 'create'
   editorForm.value = createEmptyForm()
+  nativeProvince.value = ''
+  nativeCity.value = ''
   editorError.value = ''
   isEditorOpen.value = true
 }
@@ -143,6 +216,7 @@ function openCreateEditor() {
 function openEditEditor(member: StudentProfile) {
   editorMode.value = 'edit'
   editorForm.value = toForm(member)
+  parseNativePlace(member.nativePlace ?? '')
   editorError.value = ''
   isEditorOpen.value = true
 }
@@ -193,7 +267,6 @@ function createEmptyForm(): MemberForm {
     name: '',
     cohort: '',
     degree: '',
-    role: '',
     status: 'current',
     researchText: '',
     email: '',
@@ -230,7 +303,6 @@ function fromForm(form: MemberForm): StudentProfile {
     name: form.name.trim(),
     cohort: form.cohort.trim(),
     degree: form.degree.trim(),
-    role: form.role.trim(),
     status: form.status,
     research: lines(form.researchText),
     email: form.email.trim(),
@@ -288,7 +360,7 @@ onMounted(() => {
       <div class="directory-toolbar member-admin-toolbar">
         <div>
           <p class="section-kicker">Directory</p>
-          <h2>按届别浏览成员档案</h2>
+          <h2>团队成员档案</h2>
           <p v-if="isLoadingMembers" class="api-state">正在同步成员数据...</p>
           <p v-else-if="apiError" class="api-state warning">{{ apiError }}</p>
         </div>
@@ -297,17 +369,14 @@ onMounted(() => {
             <Search :size="18" />
             <input v-model="searchText" type="search" placeholder="搜索姓名、方向、邮箱或去向" />
           </label>
-          <button v-if="isMember" class="admin-primary-btn" type="button" @click="openCreateEditor">
-            <Plus :size="18" />
-            新增成员
-          </button>
         </div>
       </div>
 
-      <div class="filter-row" aria-label="状态筛选">
-        <button type="button" :class="{ active: activeStatus === 'all' }" @click="activeStatus = 'all'">全部</button>
-        <button type="button" :class="{ active: activeStatus === 'current' }" @click="activeStatus = 'current'">在读</button>
-        <button type="button" :class="{ active: activeStatus === 'alumni' }" @click="activeStatus = 'alumni'">已毕业</button>
+      <div v-if="isMember" class="filter-row member-admin-bar" aria-label="成员管理">
+        <button class="member-create-btn" type="button" @click="openCreateEditor">
+          <Plus :size="20" />
+          <span>新增成员</span>
+        </button>
       </div>
 
       <div class="cohort-layout">
@@ -344,7 +413,7 @@ onMounted(() => {
                       <h4>{{ member.name }}</h4>
                       <span class="status-badge" :class="member.status">{{ statusLabel(member.status) }}</span>
                     </div>
-                    <p>{{ member.degree }} · {{ member.role }}</p>
+                    <p>{{ member.degree }}</p>
                     <div class="tag-list">
                       <span v-for="tag in member.research" :key="tag">{{ tag }}</span>
                     </div>
@@ -353,33 +422,20 @@ onMounted(() => {
                         <Award :size="15" />
                         成果 {{ member.achievements.length }}
                       </span>
-                      <span>
-                        <CalendarDays :size="15" />
-                        {{ member.cohort }}
-                      </span>
                       <span v-if="isMember && member.nativePlace">
                         <MapPin :size="15" />
                         {{ member.nativePlace }}
                       </span>
                     </div>
-                    <p v-if="isMember && member.destination" class="destination">
+                    <div v-if="isMember && member.destination" class="destination">
                       <BriefcaseBusiness :size="15" />
-                      毕业去向：{{ member.destination }}
-                    </p>
+                      <span>毕业去向：{{ member.destination }}</span>
+                    </div>
                   </div>
                 </button>
 
                 <div class="member-actions">
                   <template v-if="isMember">
-                    <a :href="`mailto:${member.email}`" aria-label="发送邮件">
-                      <Mail :size="17" />
-                    </a>
-                    <a v-if="member.phone" :href="`tel:${member.phone}`" aria-label="拨打电话">
-                      <Phone :size="17" />
-                    </a>
-                    <button v-else type="button" aria-label="电话未公开" disabled>
-                      <Phone :size="17" />
-                    </button>
                     <button type="button" aria-label="编辑成员" @click="openEditEditor(member)">
                       <Pencil :size="16" />
                     </button>
@@ -399,7 +455,7 @@ onMounted(() => {
           <div v-if="groupedMembers.length === 0" class="empty-state">
             <UserRound :size="36" />
             <h3>没有匹配的成员</h3>
-            <p>可以清空搜索词，或切换届别与状态筛选。</p>
+            <p>可以清空搜索词，或切换届别筛选。</p>
           </div>
         </div>
       </div>
@@ -421,17 +477,10 @@ onMounted(() => {
           <h2>{{ selectedMember.name }}</h2>
           <p>{{ selectedMember.degree }} · {{ selectedMember.cohort }}</p>
         </div>
-      </div>
-
-      <div v-if="isMember" class="drawer-admin-actions">
-        <button type="button" @click="openEditEditor(selectedMember)">
-          <Pencil :size="17" />
-          编辑
-        </button>
-        <button type="button" class="danger" @click="deleteMember(selectedMember)">
-          <Trash2 :size="17" />
-          删除
-        </button>
+        <div v-if="isMember && selectedMember.destination" class="drawer-destination">
+          <span class="drawer-destination-label">毕业去向</span>
+          <p>{{ selectedMember.destination }}</p>
+        </div>
       </div>
 
       <div class="drawer-section">
@@ -467,11 +516,6 @@ onMounted(() => {
           </ul>
         </div>
 
-        <div v-if="selectedMember.destination" class="drawer-section destination-panel">
-          <h3>毕业去向</h3>
-          <p>{{ selectedMember.destination }}</p>
-        </div>
-
         <div class="drawer-contact">
           <p v-if="selectedMember.nativePlace">
             <MapPin :size="18" />
@@ -483,11 +527,11 @@ onMounted(() => {
           </p>
           <a :href="`mailto:${selectedMember.email}`">
             <Mail :size="18" />
-            {{ selectedMember.email }}
+            邮箱：{{ selectedMember.email }}
           </a>
           <a v-if="selectedMember.phone" :href="`tel:${selectedMember.phone}`">
             <Phone :size="18" />
-            {{ selectedMember.phone }}
+            电话：{{ selectedMember.phone }}
           </a>
         </div>
       </template>
@@ -507,22 +551,27 @@ onMounted(() => {
 
       <form class="member-editor-form" @submit.prevent="saveMember">
         <div class="editor-heading">
-          <span class="status-badge current">{{ editorMode === 'create' ? 'New' : 'Edit' }}</span>
           <h2>{{ editorMode === 'create' ? '新增成员' : '编辑成员' }}</h2>
         </div>
 
-        <label>
-          <span>ID</span>
-          <input v-model="editorForm.id" type="text" :disabled="editorMode === 'edit'" placeholder="留空则自动生成" />
-        </label>
-        <label>
-          <span>姓名</span>
-          <input v-model="editorForm.name" type="text" required />
-        </label>
         <div class="editor-grid">
           <label>
-            <span>届别</span>
+            <span>姓名 <em class="required-hint">(必填)</em></span>
+            <input v-model="editorForm.name" type="text" required />
+          </label>
+          <label>
+            <span>届别 <em class="required-hint">(必填)</em></span>
             <input v-model="editorForm.cohort" type="text" required />
+          </label>
+        </div>
+        <div class="editor-grid">
+          <label>
+            <span>学位</span>
+            <select v-model="editorForm.degree">
+              <option value="">请选择</option>
+              <option value="硕士">硕士</option>
+              <option value="博士">博士</option>
+            </select>
           </label>
           <label>
             <span>状态</span>
@@ -534,12 +583,38 @@ onMounted(() => {
         </div>
         <div class="editor-grid">
           <label>
-            <span>学位</span>
-            <input v-model="editorForm.degree" type="text" required />
+            <span>籍贯</span>
+            <select v-model="nativeProvince" @change="nativeCity = ''">
+              <option value="">请选择省份</option>
+              <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
+            </select>
           </label>
           <label>
-            <span>角色</span>
-            <input v-model="editorForm.role" type="text" required />
+            <span>&nbsp;</span>
+            <select v-model="nativeCity" :disabled="!nativeProvince">
+              <option value="">请选择城市</option>
+              <option v-for="c in nativeCities" :key="c" :value="c">{{ c }}</option>
+            </select>
+          </label>
+        </div>
+        <div class="editor-grid">
+          <label>
+            <span>电话</span>
+            <input v-model="editorForm.phone" type="text" />
+          </label>
+          <label>
+            <span>邮箱</span>
+            <input v-model="editorForm.email" type="email" />
+          </label>
+        </div>
+        <div class="editor-grid">
+          <label>
+            <span>微信</span>
+            <input v-model="editorForm.wechat" type="text" />
+          </label>
+          <label>
+            <span>毕业去向</span>
+            <input v-model="editorForm.destination" type="text" />
           </label>
         </div>
         <label>
@@ -547,30 +622,8 @@ onMounted(() => {
           <textarea v-model="editorForm.researchText" rows="3"></textarea>
         </label>
         <label>
-          <span>邮箱</span>
-          <input v-model="editorForm.email" type="email" required />
-        </label>
-        <div class="editor-grid">
-          <label>
-            <span>电话</span>
-            <input v-model="editorForm.phone" type="text" />
-          </label>
-          <label>
-            <span>微信</span>
-            <input v-model="editorForm.wechat" type="text" />
-          </label>
-        </div>
-        <label>
-          <span>籍贯</span>
-          <input v-model="editorForm.nativePlace" type="text" />
-        </label>
-        <label>
-          <span>照片 URL</span>
-          <input v-model="editorForm.photo" type="text" placeholder="./students/2026/name.jpg" />
-        </label>
-        <label>
           <span>个人简介</span>
-          <textarea v-model="editorForm.bio" rows="4" required></textarea>
+          <textarea v-model="editorForm.bio" rows="4"></textarea>
         </label>
         <label>
           <span>代表成果（每行一个）</span>
@@ -579,10 +632,6 @@ onMounted(() => {
         <label>
           <span>个人经历（每行一个）</span>
           <textarea v-model="editorForm.experiencesText" rows="4"></textarea>
-        </label>
-        <label>
-          <span>毕业去向</span>
-          <input v-model="editorForm.destination" type="text" />
         </label>
 
         <p v-if="editorError" class="login-error">{{ editorError }}</p>

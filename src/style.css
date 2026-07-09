@@ -803,6 +803,37 @@ h3 {
   font-weight: 700;
 }
 
+/* ---- 新增成员按钮 ---- */
+.member-admin-bar .member-create-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 26px;
+  border: 1px solid var(--green);
+  border-radius: 10px;
+  color: #ffffff;
+  background: var(--green);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(29, 129, 99, 0.25);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.member-admin-bar .member-create-btn:hover {
+  background: #176347;
+  border-color: #176347;
+  box-shadow: 0 4px 16px rgba(29, 129, 99, 0.35);
+  transform: translateY(-1px);
+}
+
+.member-admin-bar .member-create-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(29, 129, 99, 0.2);
+}
+
 .filter-row button.active,
 .cohort-panel button.active {
   color: #ffffff;
@@ -989,16 +1020,20 @@ h3 {
   font-size: 14px;
 }
 
-.member-facts span,
-.destination {
+.member-facts span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
 .destination {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   color: var(--gold);
+  font-size: 14px;
   font-weight: 700;
+  line-height: 1.5;
 }
 
 .member-actions {
@@ -1262,6 +1297,13 @@ h3 {
   gap: 12px;
 }
 
+.required-hint {
+  font-style: normal;
+  font-weight: 400;
+  color: #e74c3c;
+  font-size: 0.85em;
+}
+
 /* ========== Locked hint in cards ========== */
 
 .locked-hint {
@@ -1331,7 +1373,7 @@ h3 {
 
 .drawer-profile {
   display: grid;
-  grid-template-columns: 112px 1fr;
+  grid-template-columns: 112px 1fr auto;
   gap: 18px;
   align-items: center;
   margin-top: 18px;
@@ -1403,6 +1445,32 @@ h3 {
 .destination-panel p {
   color: #7f4b08;
   font-weight: 700;
+}
+
+/* ---- 详情页头部毕业去向 ---- */
+.drawer-destination {
+  padding: 14px 18px;
+  border: 1px solid #ead7b4;
+  border-radius: 8px;
+  background: #fff8eb;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.drawer-destination-label {
+  display: block;
+  margin-bottom: 4px;
+  color: #7f4b08;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drawer-destination p {
+  color: #7f4b08;
+  font-size: 20px;
+  font-weight: 800;
 }
 
 .drawer-contact {

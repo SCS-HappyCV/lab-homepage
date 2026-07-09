@@ -9,7 +9,6 @@ export default [
     wechat: 'w384z756m',
     cohort: '2023',
     degree: '硕士',
-    role: '毕业生',
     status: 'alumni',
     photo: studentPhoto('2023', 'wu-zhiming.jpg'),
     research: ['变化检测'],

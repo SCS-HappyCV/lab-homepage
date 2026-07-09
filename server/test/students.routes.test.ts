@@ -23,7 +23,6 @@ function sampleStudent(overrides: Partial<StudentRecord> = {}): StudentRecord {
     name: 'Li Si',
     cohort: '2026',
     degree: 'Master',
-    role: 'Student',
     status: 'current',
     research: ['Vision'],
     email: 'lisi@example.com',

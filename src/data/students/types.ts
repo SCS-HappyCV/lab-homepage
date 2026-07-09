@@ -5,7 +5,6 @@ export interface StudentProfile {
   name: string
   cohort: string
   degree: string
-  role: string
   status: StudentStatus
   research: string[]
   email: string

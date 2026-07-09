@@ -61,7 +61,6 @@ function withDefaults(input: Partial<StudentRecord>, forcedId?: string): Student
     name: String(input.name ?? ''),
     cohort: String(input.cohort ?? ''),
     degree: String(input.degree ?? ''),
-    role: String(input.role ?? ''),
     status: normalizeStatus(input.status),
     research: asStringArray(input.research),
     email: String(input.email ?? ''),

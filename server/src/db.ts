@@ -21,7 +21,6 @@ export function initDatabase(db: AppDatabase) {
       name TEXT NOT NULL,
       cohort TEXT NOT NULL,
       degree TEXT NOT NULL,
-      role TEXT NOT NULL,
       status TEXT NOT NULL CHECK (status IN ('current', 'alumni')),
       research TEXT NOT NULL,
       email TEXT NOT NULL,
