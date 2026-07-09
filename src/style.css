@@ -721,6 +721,46 @@ h3 {
   margin-top: 8px;
 }
 
+.member-admin-toolbar {
+  align-items: start;
+}
+
+.member-admin-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-primary-btn,
+.drawer-admin-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: var(--green);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-primary-btn:hover,
+.drawer-admin-actions button:hover {
+  background: #176347;
+}
+
+.api-state {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.api-state.warning {
+  color: #98621b;
+}
+
 .people-search {
   display: flex;
   align-items: center;
@@ -996,6 +1036,28 @@ h3 {
   background: #f3f6f4;
 }
 
+.drawer-admin-actions {
+  display: flex;
+  gap: 10px;
+  margin: 22px 0 0;
+}
+
+.drawer-admin-actions button {
+  min-height: 38px;
+  padding: 8px 13px;
+}
+
+.drawer-admin-actions button.danger,
+.member-actions button[aria-label='删除成员'] {
+  color: #ffffff;
+  background: #a63f3f;
+}
+
+.drawer-admin-actions button.danger:hover,
+.member-actions button[aria-label='删除成员']:hover {
+  background: #8c3030;
+}
+
 .empty-state {
   display: grid;
   place-items: center;
@@ -1146,6 +1208,58 @@ h3 {
 
 .login-btn-cancel:hover {
   background: var(--line);
+}
+
+.member-editor {
+  max-width: 620px;
+}
+
+.member-editor-form {
+  display: grid;
+  gap: 16px;
+}
+
+.editor-heading {
+  display: grid;
+  gap: 8px;
+  padding-right: 44px;
+}
+
+.member-editor-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.member-editor-form input,
+.member-editor-form select,
+.member-editor-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: #ffffff;
+  font: inherit;
+  font-weight: 600;
+}
+
+.member-editor-form textarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.member-editor-form input:disabled {
+  color: #7f8c86;
+  background: #f3f6f4;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 /* ========== Locked hint in cards ========== */
@@ -2025,6 +2139,10 @@ h3 {
 
   .profile-drawer {
     padding: 18px;
+  }
+
+  .editor-grid {
+    grid-template-columns: 1fr;
   }
 
   .drawer-profile {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   Award,
   BriefcaseBusiness,
@@ -10,33 +10,58 @@ import {
   Mail,
   MapPin,
   MessageCircle,
+  Pencil,
   Phone,
+  Plus,
+  Save,
   Search,
   Sparkles,
+  Trash2,
   UserRound,
   X,
 } from 'lucide-vue-next'
-import { cohortOrder, studentProfiles, type StudentProfile, type StudentStatus } from '../data/students/index'
+import { studentProfiles, type StudentProfile, type StudentStatus } from '../data/students/index'
+import { memberApi } from '../utils/api'
 import { useAuth } from '../utils/useAuth'
 import { publicAsset } from '../utils/publicAsset'
 
 type StatusFilter = 'all' | StudentStatus
+type EditorMode = 'create' | 'edit'
+type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experiences'> & {
+  researchText: string
+  achievementsText: string
+  experiencesText: string
+}
 
-const activeCohort = ref('全部')
+const allCohorts = '全部'
+
+const members = ref<StudentProfile[]>(studentProfiles)
+const apiError = ref('')
+const isLoadingMembers = ref(false)
+const activeCohort = ref(allCohorts)
 const activeStatus = ref<StatusFilter>('all')
 const searchText = ref('')
 const selectedMember = ref<StudentProfile | null>(null)
+const editorMode = ref<EditorMode>('create')
+const isEditorOpen = ref(false)
+const editorError = ref('')
+const isSavingMember = ref(false)
+const editorForm = ref<MemberForm>(createEmptyForm())
 const labLife = publicAsset('gallery/lab/lab-life.jpg')
 
 const { isMember } = useAuth()
 
-const cohorts = computed(() => ['全部', ...cohortOrder.filter((cohort) => studentProfiles.some((item) => item.cohort === cohort))])
+const cohortOrder = computed(() =>
+  Array.from(new Set(members.value.map((member) => member.cohort))).sort((a, b) => b.localeCompare(a)),
+)
+
+const cohorts = computed(() => [allCohorts, ...cohortOrder.value])
 
 const filteredMembers = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
 
-  return studentProfiles.filter((member) => {
-    const matchesCohort = activeCohort.value === '全部' || member.cohort === activeCohort.value
+  return members.value.filter((member) => {
+    const matchesCohort = activeCohort.value === allCohorts || member.cohort === activeCohort.value
     const matchesStatus = activeStatus.value === 'all' || member.status === activeStatus.value
     const text = [
       member.name,
@@ -58,7 +83,7 @@ const filteredMembers = computed(() => {
 })
 
 const groupedMembers = computed(() =>
-  cohortOrder
+  cohortOrder.value
     .map((cohort) => ({
       cohort,
       members: filteredMembers.value.filter((member) => member.cohort === cohort),
@@ -67,11 +92,11 @@ const groupedMembers = computed(() =>
 )
 
 const stats = computed(() => {
-  const alumni = studentProfiles.filter((member) => member.status === 'alumni').length
-  const current = studentProfiles.filter((member) => member.status === 'current').length
+  const alumni = members.value.filter((member) => member.status === 'alumni').length
+  const current = members.value.filter((member) => member.status === 'current').length
 
   return [
-    { label: '成员档案', value: studentProfiles.length },
+    { label: '成员档案', value: members.value.length },
     { label: '在读学生', value: current },
     { label: '历届毕业生', value: alumni },
     { label: '届别分组', value: cohorts.value.length - 1 },
@@ -83,12 +108,6 @@ function statusLabel(status: StudentStatus) {
 }
 
 function initials(name: string) {
-  const placeholderMatch = name.match(/成员\s*([a-z0-9一-龥])/i)
-
-  if (placeholderMatch?.[1]) {
-    return placeholderMatch[1].toUpperCase()
-  }
-
   return name.replace(/\d{4}届/g, '').replace(/\s+/g, '').slice(0, 2).toUpperCase()
 }
 
@@ -99,6 +118,152 @@ function selectMember(member: StudentProfile) {
 function clearSelectedMember() {
   selectedMember.value = null
 }
+
+async function loadMembers() {
+  isLoadingMembers.value = true
+  apiError.value = ''
+
+  try {
+    members.value = await memberApi.listStudents()
+  } catch {
+    members.value = studentProfiles
+    apiError.value = '成员数据服务暂时不可用，当前显示内置备份数据。'
+  } finally {
+    isLoadingMembers.value = false
+  }
+}
+
+function openCreateEditor() {
+  editorMode.value = 'create'
+  editorForm.value = createEmptyForm()
+  editorError.value = ''
+  isEditorOpen.value = true
+}
+
+function openEditEditor(member: StudentProfile) {
+  editorMode.value = 'edit'
+  editorForm.value = toForm(member)
+  editorError.value = ''
+  isEditorOpen.value = true
+}
+
+function closeEditor() {
+  isEditorOpen.value = false
+  editorError.value = ''
+}
+
+async function saveMember() {
+  editorError.value = ''
+  isSavingMember.value = true
+
+  try {
+    const payload = fromForm(editorForm.value)
+    if (editorMode.value === 'create') {
+      await memberApi.createStudent(payload)
+    } else {
+      await memberApi.updateStudent(payload.id, payload)
+    }
+    closeEditor()
+    await loadMembers()
+    if (selectedMember.value?.id === payload.id) {
+      selectedMember.value = members.value.find((member) => member.id === payload.id) ?? null
+    }
+  } catch {
+    editorError.value = '保存失败，请确认后端服务可用且登录状态有效。'
+  } finally {
+    isSavingMember.value = false
+  }
+}
+
+async function deleteMember(member: StudentProfile) {
+  if (!window.confirm(`确认删除 ${member.name} 吗？此操作会更新公开成员数据。`)) return
+
+  try {
+    await memberApi.deleteStudent(member.id)
+    if (selectedMember.value?.id === member.id) clearSelectedMember()
+    await loadMembers()
+  } catch {
+    editorError.value = '删除失败，请确认后端服务可用且登录状态有效。'
+  }
+}
+
+function createEmptyForm(): MemberForm {
+  return {
+    id: '',
+    name: '',
+    cohort: '',
+    degree: '',
+    role: '',
+    status: 'current',
+    researchText: '',
+    email: '',
+    phone: '',
+    wechat: '',
+    nativePlace: '',
+    photo: '',
+    destination: '',
+    bio: '',
+    achievementsText: '',
+    experiencesText: '',
+  }
+}
+
+function toForm(member: StudentProfile): MemberForm {
+  return {
+    ...member,
+    phone: member.phone ?? '',
+    wechat: member.wechat ?? '',
+    nativePlace: member.nativePlace ?? '',
+    photo: member.photo ?? '',
+    destination: member.destination ?? '',
+    researchText: member.research.join('\n'),
+    achievementsText: member.achievements.join('\n'),
+    experiencesText: member.experiences.join('\n'),
+  }
+}
+
+function fromForm(form: MemberForm): StudentProfile {
+  const id = form.id.trim() || createMemberId(form)
+
+  return {
+    id,
+    name: form.name.trim(),
+    cohort: form.cohort.trim(),
+    degree: form.degree.trim(),
+    role: form.role.trim(),
+    status: form.status,
+    research: lines(form.researchText),
+    email: form.email.trim(),
+    phone: form.phone?.trim(),
+    wechat: form.wechat?.trim(),
+    nativePlace: form.nativePlace?.trim(),
+    photo: form.photo?.trim(),
+    destination: form.destination?.trim(),
+    bio: form.bio.trim(),
+    achievements: lines(form.achievementsText),
+    experiences: lines(form.experiencesText),
+  }
+}
+
+function lines(value: string) {
+  return value
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function createMemberId(form: MemberForm) {
+  const namePart = form.name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+  return `${form.cohort.trim() || 'member'}-${namePart || Date.now()}`
+}
+
+onMounted(() => {
+  void loadMembers()
+})
 </script>
 
 <template>
@@ -109,9 +274,7 @@ function clearSelectedMember() {
       <div class="people-hero-content">
         <p class="eyebrow">People Directory</p>
         <h1 id="people-title">团队成员</h1>
-        <p>
-          按届别管理在读学生与历届毕业生，集中展示照片、研究方向、代表成果、个人经历、联系方式和毕业去向。
-        </p>
+        <p>按届别管理在读学生与历届毕业生，集中展示照片、研究方向、代表成果、个人经历、联系方式和毕业去向。</p>
         <div class="people-stats" aria-label="成员概览">
           <article v-for="item in stats" :key="item.label">
             <strong>{{ item.value }}</strong>
@@ -122,16 +285,24 @@ function clearSelectedMember() {
     </section>
 
     <section class="people-directory" aria-label="成员列表">
-      <!-- <div class="directory-toolbar">
+      <div class="directory-toolbar member-admin-toolbar">
         <div>
           <p class="section-kicker">Directory</p>
           <h2>按届别浏览成员档案</h2>
+          <p v-if="isLoadingMembers" class="api-state">正在同步成员数据...</p>
+          <p v-else-if="apiError" class="api-state warning">{{ apiError }}</p>
         </div>
-        <label class="people-search">
-          <Search :size="18" />
-          <input v-model="searchText" type="search" placeholder="搜索姓名、方向、籍贯、邮箱或去向" />
-        </label>
-      </div> -->
+        <div class="member-admin-actions">
+          <label class="people-search">
+            <Search :size="18" />
+            <input v-model="searchText" type="search" placeholder="搜索姓名、方向、邮箱或去向" />
+          </label>
+          <button v-if="isMember" class="admin-primary-btn" type="button" @click="openCreateEditor">
+            <Plus :size="18" />
+            新增成员
+          </button>
+        </div>
+      </div>
 
       <div class="filter-row" aria-label="状态筛选">
         <button type="button" :class="{ active: activeStatus === 'all' }" @click="activeStatus = 'all'">全部</button>
@@ -151,7 +322,7 @@ function clearSelectedMember() {
             <span>{{ cohort }}</span>
             <ChevronRight :size="16" />
           </button>
-          <p>成员信息按届别归档，已毕业同学展示毕业去向，在读同学展示主要研究方向与联系方式。</p>
+          <p>成员信息按届别归档。认证后可在本页新增、编辑或删除成员资料。</p>
         </aside>
 
         <div class="member-groups">
@@ -209,6 +380,12 @@ function clearSelectedMember() {
                     <button v-else type="button" aria-label="电话未公开" disabled>
                       <Phone :size="17" />
                     </button>
+                    <button type="button" aria-label="编辑成员" @click="openEditEditor(member)">
+                      <Pencil :size="16" />
+                    </button>
+                    <button type="button" aria-label="删除成员" @click="deleteMember(member)">
+                      <Trash2 :size="16" />
+                    </button>
                   </template>
                   <button v-else type="button" aria-label="成员专属" disabled class="locked-hint">
                     <Lock :size="15" />
@@ -244,6 +421,17 @@ function clearSelectedMember() {
           <h2>{{ selectedMember.name }}</h2>
           <p>{{ selectedMember.degree }} · {{ selectedMember.cohort }}</p>
         </div>
+      </div>
+
+      <div v-if="isMember" class="drawer-admin-actions">
+        <button type="button" @click="openEditEditor(selectedMember)">
+          <Pencil :size="17" />
+          编辑
+        </button>
+        <button type="button" class="danger" @click="deleteMember(selectedMember)">
+          <Trash2 :size="17" />
+          删除
+        </button>
       </div>
 
       <div class="drawer-section">
@@ -301,10 +489,6 @@ function clearSelectedMember() {
             <Phone :size="18" />
             {{ selectedMember.phone }}
           </a>
-          <p v-else>
-            <Phone :size="18" />
-            电话未公开
-          </p>
         </div>
       </template>
 
@@ -313,6 +497,104 @@ function clearSelectedMember() {
         <p>以下内容仅对实验室成员可见</p>
         <p class="drawer-locked-hint">请通过导航栏锁图标验证身份</p>
       </div>
+    </aside>
+
+    <div v-if="isEditorOpen" class="drawer-backdrop" @click="closeEditor"></div>
+    <aside v-if="isEditorOpen" class="profile-drawer member-editor" role="dialog" aria-modal="true" aria-label="编辑成员">
+      <button class="drawer-close" type="button" aria-label="关闭编辑器" @click="closeEditor">
+        <X :size="22" />
+      </button>
+
+      <form class="member-editor-form" @submit.prevent="saveMember">
+        <div class="editor-heading">
+          <span class="status-badge current">{{ editorMode === 'create' ? 'New' : 'Edit' }}</span>
+          <h2>{{ editorMode === 'create' ? '新增成员' : '编辑成员' }}</h2>
+        </div>
+
+        <label>
+          <span>ID</span>
+          <input v-model="editorForm.id" type="text" :disabled="editorMode === 'edit'" placeholder="留空则自动生成" />
+        </label>
+        <label>
+          <span>姓名</span>
+          <input v-model="editorForm.name" type="text" required />
+        </label>
+        <div class="editor-grid">
+          <label>
+            <span>届别</span>
+            <input v-model="editorForm.cohort" type="text" required />
+          </label>
+          <label>
+            <span>状态</span>
+            <select v-model="editorForm.status">
+              <option value="current">在读</option>
+              <option value="alumni">已毕业</option>
+            </select>
+          </label>
+        </div>
+        <div class="editor-grid">
+          <label>
+            <span>学位</span>
+            <input v-model="editorForm.degree" type="text" required />
+          </label>
+          <label>
+            <span>角色</span>
+            <input v-model="editorForm.role" type="text" required />
+          </label>
+        </div>
+        <label>
+          <span>研究方向（每行一个）</span>
+          <textarea v-model="editorForm.researchText" rows="3"></textarea>
+        </label>
+        <label>
+          <span>邮箱</span>
+          <input v-model="editorForm.email" type="email" required />
+        </label>
+        <div class="editor-grid">
+          <label>
+            <span>电话</span>
+            <input v-model="editorForm.phone" type="text" />
+          </label>
+          <label>
+            <span>微信</span>
+            <input v-model="editorForm.wechat" type="text" />
+          </label>
+        </div>
+        <label>
+          <span>籍贯</span>
+          <input v-model="editorForm.nativePlace" type="text" />
+        </label>
+        <label>
+          <span>照片 URL</span>
+          <input v-model="editorForm.photo" type="text" placeholder="./students/2026/name.jpg" />
+        </label>
+        <label>
+          <span>个人简介</span>
+          <textarea v-model="editorForm.bio" rows="4" required></textarea>
+        </label>
+        <label>
+          <span>代表成果（每行一个）</span>
+          <textarea v-model="editorForm.achievementsText" rows="4"></textarea>
+        </label>
+        <label>
+          <span>个人经历（每行一个）</span>
+          <textarea v-model="editorForm.experiencesText" rows="4"></textarea>
+        </label>
+        <label>
+          <span>毕业去向</span>
+          <input v-model="editorForm.destination" type="text" />
+        </label>
+
+        <p v-if="editorError" class="login-error">{{ editorError }}</p>
+
+        <div class="login-actions">
+          <button type="submit" class="login-btn login-btn-confirm" :disabled="isSavingMember">
+            <Save :size="17" />
+            {{ isSavingMember ? '保存中...' : '保存' }}
+          </button>
+          <button type="button" class="login-btn login-btn-cancel" @click="closeEditor">取消</button>
+        </div>
+      </form>
     </aside>
   </main>
 </template>
