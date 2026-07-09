@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the Vue/Vite frontend on GitHub Pages and add a `server/` Express service in the same repository. The backend owns SQLite persistence and authenticated writes; the frontend reads API data first and falls back to compiled member data when the API is unavailable.
 
-**Tech Stack:** Vue 3, Vite, TypeScript, Express, SQLite via `better-sqlite3`, JWT via `jsonwebtoken`, password hashing with Node `crypto`, backend tests with Node's built-in test runner and Supertest.
+**Tech Stack:** Vue 3, Vite, TypeScript, Express, SQLite via Node's built-in `node:sqlite`, JWT via `jsonwebtoken`, password hashing with Node `crypto`, backend tests with Node's built-in test runner and Supertest.
 
 ## Global Constraints
 
