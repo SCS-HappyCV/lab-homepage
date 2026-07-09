@@ -2,10 +2,11 @@ import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { loadConfig } from '../src/config.js'
 import { openDatabase } from '../src/db.js'
-import type { StudentRecord } from '../src/types.js'
+import type { StudentRecord, StudentStatus } from '../src/types.js'
 
 /**
- * SQLite 中 storage/research/achievements/experiences 存储为 JSON 字符串。
+ * SQLite 中 research/achievements/experiences 存储为 JSON 字符串，
+ * 可空文本列为 string | null。
  * 该接口反映 SELECT * 返回的原始行形状，避免双重类型断言。
  */
 interface StudentRow {
@@ -55,10 +56,25 @@ function main() {
     const rows = db.prepare('SELECT * FROM students ORDER BY sortOrder').all() as unknown as StudentRow[]
 
     const exportData: StudentRecord[] = rows.map((row) => ({
-      ...row,
+      id: row.id,
+      name: row.name,
+      cohort: row.cohort,
+      degree: row.degree,
+      status: row.status as StudentStatus,
+      email: row.email,
+      // 将 SQLite 的 null 转为 undefined，JSON.stringify 会自动省略 undefined 字段
+      phone: row.phone ?? undefined,
+      wechat: row.wechat ?? undefined,
+      nativePlace: row.nativePlace ?? undefined,
+      photo: row.photo ?? undefined,
+      destination: row.destination ?? undefined,
+      bio: row.bio,
       research: safeParseJsonArray(row.research),
       achievements: safeParseJsonArray(row.achievements),
       experiences: safeParseJsonArray(row.experiences),
+      sortOrder: row.sortOrder,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     }))
 
     const outPath = fileURLToPath(new URL('../data/export-students.json', import.meta.url))
