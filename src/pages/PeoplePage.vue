@@ -125,7 +125,7 @@ watch([nativeProvince, nativeCity], () => {
 })
 
 const cohortOrder = computed(() =>
-  Array.from(new Set(members.value.map((member) => member.cohort))).sort((a, b) => b.localeCompare(a)),
+  Array.from(new Set(members.value.map((member) => member.cohort))).sort((a, b) => a.localeCompare(b)),
 )
 
 const cohorts = computed(() => [allCohorts, ...cohortOrder.value])
@@ -157,7 +157,9 @@ const groupedMembers = computed(() =>
   cohortOrder.value
     .map((cohort) => ({
       cohort,
-      members: filteredMembers.value.filter((member) => member.cohort === cohort),
+      members: filteredMembers.value
+        .filter((member) => member.cohort === cohort)
+        .sort((a, b) => a.name.localeCompare(b.name, 'zh')),
     }))
     .filter((group) => group.members.length > 0),
 )
