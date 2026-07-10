@@ -1698,7 +1698,7 @@ h3 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .modal-contact-item {
@@ -1741,7 +1741,7 @@ h3 {
 }
 
 .modal-bio-section {
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 .modal-bio-section .modal-section-title {
