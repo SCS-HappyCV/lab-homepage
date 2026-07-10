@@ -16,7 +16,18 @@ export function createApp(options: Partial<AppOptions> = {}) {
   const config = options.config ?? loadConfig()
   const app = express()
 
-  app.use(cors({ origin: config.corsOrigin === '*' ? true : config.corsOrigin }))
+  const allowedOrigins = config.corsOrigin.split(',').map(s => s.trim())
+  app.use(cors({
+    origin: config.corsOrigin === '*'
+      ? true
+      : (origin, callback) => {
+          if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true)
+          } else {
+            callback(new Error('Not allowed by CORS'))
+          }
+        }
+  }))
   app.use(express.json({ limit: '1mb' }))
 
   // 静态文件服务 - 照片访问

@@ -7,4 +7,12 @@ export default defineConfig({
   build: {
     outDir: 'docs',
   },
+  server: {
+    proxy: {
+      '/uploads': {
+        target: 'http://172.16.224.21:3003',
+        changeOrigin: true,
+      },
+    },
+  },
 })

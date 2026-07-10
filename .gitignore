@@ -16,6 +16,9 @@ server/.env
 server/data
 server/dist
 
+.claude
+CLAUDE.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
