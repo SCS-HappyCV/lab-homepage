@@ -1141,10 +1141,23 @@ h3 {
   background: #ffffff;
   cursor: pointer;
   font-weight: 700;
+  transition: all 0.2s ease;
 }
 
 .member-actions button:last-child {
   padding: 0 13px;
+}
+
+.member-actions button[aria-label='编辑成员'] {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.member-actions button[aria-label='编辑成员']:hover {
+  color: #ffffff;
+  background: var(--green);
+  border-color: var(--green);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .member-actions button:disabled {
@@ -1455,6 +1468,501 @@ h3 {
   background: #ffffff;
   box-shadow: -24px 0 70px rgba(9, 24, 22, 0.24);
 }
+
+/* ========== Member Detail Modal ========== */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(8, 18, 16, 0.56);
+  animation: backdrop-fade-in 0.2s ease;
+}
+
+@keyframes backdrop-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.member-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  width: min(90vw, 860px);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+  animation: modal-enter 0.25s ease;
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: var(--soft);
+}
+
+.modal-body {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  min-height: 480px;
+}
+
+.modal-info {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- 头部：头像 + 姓名 + 籍贯 + 学位 --- */
+.modal-header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.modal-avatar {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 2px solid var(--line);
+  background: linear-gradient(135deg, #10201c, #087c89 54%, #b7791f);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-avatar span {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.modal-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-name-row h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.modal-native {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.modal-degree {
+  color: var(--muted);
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+/* --- 研究方向标签 --- */
+.modal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.modal-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 12px;
+  color: #1f5f4a;
+  border: 1px solid #cce4d7;
+  border-radius: 999px;
+  background: #f0f7f3;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* --- 分隔线 --- */
+.modal-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 18px 0;
+}
+
+/* --- 毕业去向 --- */
+.modal-destination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  color: #7f4b08;
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid #ead7b4;
+  border-radius: 8px;
+  background: #fff8eb;
+}
+
+.modal-destination-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: #7f4b08;
+  border: 1px solid #ead7b4;
+  border-radius: 8px;
+  background: #fff8eb;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.modal-destination-header svg {
+  flex-shrink: 0;
+}
+
+.destination-value {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+@media (max-width: 600px) {
+  .modal-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-destination-header {
+    margin-left: 0;
+    margin-top: 12px;
+  }
+}
+
+/* --- 联系方式行 --- */
+.modal-contact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+/* --- 联系方式（两列布局） --- */
+.modal-contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.modal-contact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.contact-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.contact-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contact-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contact-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.modal-bio-section {
+  margin-top: 16px;
+}
+
+.modal-bio-section .modal-section-title {
+  margin-bottom: 12px;
+}
+
+/* --- 个人简介（折叠） --- */
+.modal-bio {
+  position: relative;
+  overflow: hidden;
+  max-height: 88px;
+  transition: max-height 0.3s ease;
+}
+
+.modal-bio.expanded {
+  max-height: none;
+}
+
+.modal-bio p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.bio-toggle {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 0;
+  color: var(--green);
+  background: transparent;
+  border: 0;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bio-toggle:hover {
+  text-decoration: underline;
+}
+
+/* --- 代表成果/个人经历 --- */
+.modal-section {
+  margin-top: 16px;
+}
+
+.modal-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.modal-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.modal-list li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.modal-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--green);
+}
+
+/* --- 更多操作 --- */
+.modal-actions {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-icon-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: var(--soft);
+}
+
+.action-icon-danger {
+  color: #a63f3f;
+  border-color: #e8c4c4;
+}
+
+.action-icon-danger:hover {
+  color: #ffffff;
+  background: #a63f3f;
+  border-color: #a63f3f;
+}
+
+.more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.more-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.more-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.more-btn svg.rotated {
+  transform: rotate(180deg);
+}
+
+.action-menu {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  animation: menu-slide-in 0.15s ease;
+}
+
+@keyframes menu-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.action-menu button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-menu button:hover {
+  border-color: var(--ink);
+  background: var(--soft);
+}
+
+.action-menu .action-danger {
+  color: #a63f3f;
+  border-color: #e8c4c4;
+}
+
+.action-menu .action-danger:hover {
+  color: #ffffff;
+  background: #a63f3f;
+  border-color: #a63f3f;
+}
+
+/* --- 右侧大照片 --- */
+.modal-photo {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 16px 16px 0;
+  background: linear-gradient(135deg, #10201c, #087c89 54%, #b7791f);
+}
+
+.modal-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-photo-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #ffffff;
+  font-size: 64px;
+  font-weight: 800;
+}
+
+/* ========== Editor Drawer (保留) ========== */
 
 .drawer-close {
   display: flex;
@@ -2306,6 +2814,33 @@ h3 {
 
   .profile-drawer {
     padding: 18px;
+  }
+
+  .member-modal {
+    width: min(95vw, 600px);
+    max-height: 90vh;
+  }
+
+  .modal-body {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-photo {
+    max-height: 240px;
+    border-radius: 16px 16px 0 0;
+    order: -1;
+  }
+
+  .modal-photo-initials {
+    font-size: 48px;
+  }
+
+  .modal-info {
+    padding: 20px;
+  }
+
+  .modal-name-row h2 {
+    font-size: 22px;
   }
 
   .editor-grid {

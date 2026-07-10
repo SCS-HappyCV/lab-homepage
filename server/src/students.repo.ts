@@ -22,6 +22,7 @@ export class StudentValidationError extends Error {
 
 export interface StudentRepository {
   list(): StudentRecord[]
+  get(id: string): StudentRecord | null
   create(student: StudentRecord): StudentRecord
   update(id: string, student: StudentRecord): StudentRecord | null
   delete(id: string): boolean
@@ -37,6 +38,11 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         )
         .all()
         .map((row) => fromRow(row as StudentRow))
+    },
+
+    get(id) {
+      const row = db.prepare('SELECT * FROM students WHERE id = ?').get(id)
+      return row ? fromRow(row as StudentRow) : null
     },
 
     create(student) {

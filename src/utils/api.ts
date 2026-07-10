@@ -118,6 +118,30 @@ export function createMemberApi({ baseUrl, storage, fetchImpl = fetch }: MemberA
         method: 'DELETE',
       })
     },
+
+    async uploadPhoto(memberId: string, file: File): Promise<{ photo: string; originalSize: number; compressedSize: number; saved: boolean }> {
+      if (!normalizedBaseUrl) {
+        throw new Error('VITE_API_BASE_URL is not configured')
+      }
+
+      const formData = new FormData()
+      formData.append('photo', file)
+
+      const response = await fetchImpl(`${normalizedBaseUrl}/students/${encodeURIComponent(memberId)}/photo`, {
+        method: 'POST',
+        headers: {
+          Authorization: storage.getToken() ? `Bearer ${storage.getToken()}` : '',
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Upload failed' }))
+        throw new Error(error.error || `Upload failed with ${response.status}`)
+      }
+
+      return response.json()
+    },
   }
 }
 

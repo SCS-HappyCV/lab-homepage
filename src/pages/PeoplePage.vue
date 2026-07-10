@@ -4,17 +4,14 @@ import {
   Award,
   BriefcaseBusiness,
   ChevronRight,
-  GraduationCap,
   Lock,
   Mail,
   MapPin,
-  MessageCircle,
   Pencil,
   Phone,
   Plus,
   Save,
   Search,
-  Sparkles,
   Trash2,
   UserRound,
   X,
@@ -23,6 +20,7 @@ import { studentProfiles, type StudentProfile, type StudentStatus } from '../dat
 import { memberApi } from '../utils/api'
 import { useAuth } from '../utils/useAuth'
 import { publicAsset } from '../utils/publicAsset'
+import PhotoUploader from '../components/PhotoUploader.vue'
 
 type EditorMode = 'create' | 'edit'
 type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experiences'> & {
@@ -42,6 +40,7 @@ const statusFilter = ref<'全部' | 'current' | 'alumni'>('全部')
 const cohortSortAsc = ref(true)
 const nameSortAsc = ref(true)
 const selectedMember = ref<StudentProfile | null>(null)
+const bioExpanded = ref(false)
 
 const statusFilterLabels: Record<string, string> = { '全部': '全部', 'current': '在读', 'alumni': '毕业' }
 const statusFilterCycle = ['全部', 'current', 'alumni'] as const
@@ -244,6 +243,28 @@ function statusLabel(status: StudentStatus) {
   return status === 'current' ? '在读' : '毕业'
 }
 
+function parseDestinationDisplay(raw: string | undefined): { city: string; unit: string } {
+  if (!raw) return { city: '', unit: '' }
+
+  const sorted = regionData.map((r) => r.name).sort((a, b) => b.length - a.length)
+  for (const p of sorted) {
+    if (raw.startsWith(p)) {
+      const remaining = raw.slice(p.length)
+      const region = regionData.find((r) => r.name === p)
+      if (region) {
+        const citySorted = region.cities.sort((a, b) => b.length - a.length)
+        for (const c of citySorted) {
+          if (remaining.startsWith(c)) {
+            return { city: c, unit: remaining.slice(c.length) }
+          }
+        }
+      }
+      return { city: p, unit: remaining }
+    }
+  }
+  return { city: '', unit: raw }
+}
+
 function initials(name: string) {
   return name.replace(/\d{4}届/g, '').replace(/\s+/g, '').slice(0, 2).toUpperCase()
 }
@@ -254,6 +275,7 @@ function selectMember(member: StudentProfile) {
 
 function clearSelectedMember() {
   selectedMember.value = null
+  bioExpanded.value = false
 }
 
 async function loadMembers() {
@@ -293,6 +315,14 @@ function openEditEditor(member: StudentProfile) {
 function closeEditor() {
   isEditorOpen.value = false
   editorError.value = ''
+}
+
+function handlePhotoUploadSuccess(photo: string) {
+  editorForm.value.photo = photo
+}
+
+function handlePhotoUploadError(error: string) {
+  editorError.value = error
 }
 
 async function saveMember() {
@@ -527,7 +557,7 @@ onMounted(() => {
                     </div>
                     <div v-if="isMember && member.destination" class="destination">
                       <BriefcaseBusiness :size="15" />
-                      <span>毕业去向：{{ member.destination }}</span>
+                      <span>{{ [parseDestinationDisplay(member.destination).city, parseDestinationDisplay(member.destination).unit].filter(Boolean).join('/') }}</span>
                     </div>
                   </div>
                 </button>
@@ -559,85 +589,98 @@ onMounted(() => {
       </div>
     </section>
 
-    <div v-if="selectedMember" class="drawer-backdrop" @click="clearSelectedMember"></div>
-    <aside v-if="selectedMember" class="profile-drawer" role="dialog" aria-modal="true" aria-label="成员详情">
-      <button class="drawer-close" type="button" aria-label="关闭成员详情" @click="clearSelectedMember">
+    <div v-if="selectedMember" class="modal-backdrop" @click="clearSelectedMember"></div>
+    <aside v-if="selectedMember" class="member-modal" role="dialog" aria-modal="true" aria-label="成员详情" @keydown.esc="clearSelectedMember">
+      <button class="modal-close" type="button" aria-label="关闭成员详情" @click="clearSelectedMember">
         <X :size="22" />
       </button>
 
-      <div class="drawer-profile">
-        <div class="drawer-photo">
+      <div class="modal-body">
+        <div class="modal-info">
+          <div class="modal-header">
+            <div class="modal-avatar">
+              <img v-if="selectedMember.photo" :src="selectedMember.photo" :alt="selectedMember.name" />
+              <span v-else>{{ initials(selectedMember.name) }}</span>
+            </div>
+            <div class="modal-header-text">
+              <div class="modal-name-row">
+                <h2>{{ selectedMember.name }}</h2>
+                <span class="status-badge" :class="selectedMember.status">{{ statusLabel(selectedMember.status) }}</span>
+              </div>
+              <p v-if="selectedMember.nativePlace" class="modal-native">{{ selectedMember.nativePlace }}</p>
+              <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}</p>
+            </div>
+            <div v-if="selectedMember.status === 'alumni' && selectedMember.destination" class="modal-destination-header">
+              <BriefcaseBusiness :size="14" />
+              <span class="destination-value">{{ [parseDestinationDisplay(selectedMember.destination).city, parseDestinationDisplay(selectedMember.destination).unit].filter(Boolean).join('/') }}</span>
+            </div>
+          </div>
+
+          <div class="modal-tags">
+            <span v-for="tag in selectedMember.research" :key="tag">{{ tag }}</span>
+          </div>
+
+          <div class="modal-divider"></div>
+
+          <div v-if="isMember" class="modal-contact-grid">
+            <div v-if="selectedMember.phone" class="modal-contact-item">
+              <div class="contact-icon">
+                <Phone :size="15" />
+              </div>
+              <div class="contact-content">
+                <span class="contact-label">电话</span>
+                <span class="contact-value">{{ selectedMember.phone }}</span>
+              </div>
+            </div>
+            <div v-if="selectedMember.email" class="modal-contact-item">
+              <div class="contact-icon">
+                <Mail :size="15" />
+              </div>
+              <div class="contact-content">
+                <span class="contact-label">邮箱</span>
+                <span class="contact-value">{{ selectedMember.email }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-bio-section">
+            <h4 class="modal-section-title">
+              <UserRound :size="16" />
+              个人简介
+            </h4>
+            <div class="modal-bio" :class="{ expanded: bioExpanded }">
+              <p>{{ selectedMember.bio }}</p>
+              <button v-if="selectedMember.bio && selectedMember.bio.length > 100" type="button" class="bio-toggle" @click="bioExpanded = !bioExpanded">
+                {{ bioExpanded ? '收起' : '展开全部' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="selectedMember.achievements.length > 0" class="modal-section">
+            <h4 class="modal-section-title">
+              <Award :size="16" />
+              代表成果
+            </h4>
+            <ul class="modal-list">
+              <li v-for="(item, index) in selectedMember.achievements" :key="index">{{ item }}</li>
+            </ul>
+          </div>
+
+          <div v-if="selectedMember.experiences.length > 0" class="modal-section">
+            <h4 class="modal-section-title">
+              <BriefcaseBusiness :size="16" />
+              个人经历
+            </h4>
+            <ul class="modal-list">
+              <li v-for="(item, index) in selectedMember.experiences" :key="index">{{ item }}</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="modal-photo">
           <img v-if="selectedMember.photo" :src="selectedMember.photo" :alt="selectedMember.name" />
-          <span v-else>{{ initials(selectedMember.name) }}</span>
+          <span v-else class="modal-photo-initials">{{ initials(selectedMember.name) }}</span>
         </div>
-        <div>
-          <span class="status-badge" :class="selectedMember.status">{{ statusLabel(selectedMember.status) }}</span>
-          <h2>{{ selectedMember.name }}</h2>
-          <p>{{ selectedMember.degree }} · {{ selectedMember.cohort }}</p>
-        </div>
-        <div v-if="isMember && selectedMember.destination" class="drawer-destination">
-          <span class="drawer-destination-label">毕业去向</span>
-          <p>{{ selectedMember.destination }}</p>
-        </div>
-      </div>
-
-      <div class="drawer-section">
-        <h3>个人简介</h3>
-        <p>{{ selectedMember.bio }}</p>
-      </div>
-
-      <div class="drawer-section">
-        <h3>研究方向</h3>
-        <div class="tag-list">
-          <span v-for="tag in selectedMember.research" :key="tag">{{ tag }}</span>
-        </div>
-      </div>
-
-      <template v-if="isMember">
-        <div class="drawer-section">
-          <h3>代表成果</h3>
-          <ul>
-            <li v-for="item in selectedMember.achievements" :key="item">
-              <Sparkles :size="16" />
-              <span>{{ item }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="drawer-section">
-          <h3>个人经历</h3>
-          <ul>
-            <li v-for="item in selectedMember.experiences" :key="item">
-              <GraduationCap :size="16" />
-              <span>{{ item }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="drawer-contact">
-          <p v-if="selectedMember.nativePlace">
-            <MapPin :size="18" />
-            籍贯：{{ selectedMember.nativePlace }}
-          </p>
-          <p v-if="selectedMember.wechat">
-            <MessageCircle :size="18" />
-            微信：{{ selectedMember.wechat }}
-          </p>
-          <a :href="`mailto:${selectedMember.email}`">
-            <Mail :size="18" />
-            邮箱：{{ selectedMember.email }}
-          </a>
-          <a v-if="selectedMember.phone" :href="`tel:${selectedMember.phone}`">
-            <Phone :size="18" />
-            电话：{{ selectedMember.phone }}
-          </a>
-        </div>
-      </template>
-
-      <div v-else class="drawer-locked">
-        <Lock :size="24" />
-        <p>以下内容仅对实验室成员可见</p>
-        <p class="drawer-locked-hint">请通过导航栏锁图标验证身份</p>
       </div>
     </aside>
 
@@ -650,6 +693,17 @@ onMounted(() => {
       <form class="member-editor-form" @submit.prevent="saveMember">
         <div class="editor-heading">
           <h2>{{ editorMode === 'create' ? '新增成员' : '编辑成员' }}</h2>
+        </div>
+
+        <div v-if="editorMode === 'edit'" class="editor-photo-section">
+          <span class="editor-section-label">成员照片</span>
+          <PhotoUploader
+            v-model="editorForm.photo"
+            :member-id="editorForm.id"
+            :member-name="editorForm.name"
+            @upload-success="handlePhotoUploadSuccess"
+            @upload-error="handlePhotoUploadError"
+          />
         </div>
 
         <div class="editor-grid">

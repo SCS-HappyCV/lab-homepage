@@ -1,16 +1,60 @@
 import { Router } from 'express'
+import multer from 'multer'
+import path from 'node:path'
 import { requireAdmin, type AuthService } from './auth.js'
 import { StudentValidationError, type StudentRepository } from './students.repo.js'
 import type { StudentRecord } from './types.js'
+import { compressImage, ensureDirectory, generatePhotoPath } from './image-utils.js'
 
 export interface StudentRouterDeps {
   repo: StudentRepository
   authService: AuthService
+  uploadDir: string
 }
 
-export function createStudentRouter({ repo, authService }: StudentRouterDeps) {
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+])
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+
+export function createStudentRouter({ repo, authService, uploadDir }: StudentRouterDeps) {
   const router = Router()
   const adminOnly = requireAdmin(authService)
+
+  // 配置 multer
+  const storage = multer.diskStorage({
+    destination: async (_req, _file, cb) => {
+      try {
+        await ensureDirectory(uploadDir)
+        cb(null, uploadDir)
+      } catch (error) {
+        cb(error as Error, '')
+      }
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.jpg'
+      const timestamp = Date.now()
+      const random = Math.random().toString(16).slice(2, 8)
+      cb(null, `temp-${timestamp}-${random}${ext}`)
+    },
+  })
+
+  const upload = multer({
+    storage,
+    limits: {
+      fileSize: MAX_FILE_SIZE,
+    },
+    fileFilter: (_req, file, cb) => {
+      if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
+        cb(null, true)
+      } else {
+        cb(new Error('不支持的文件类型，请上传 jpg、png 或 webp 格式的图片'))
+      }
+    },
+  })
 
   router.get('/students', (_req, res) => {
     res.json(repo.list())
@@ -48,6 +92,70 @@ export function createStudentRouter({ repo, authService }: StudentRouterDeps) {
     }
 
     res.status(204).send()
+  })
+
+  // 照片上传接口
+  router.post('/students/:id/photo', adminOnly, upload.single('photo'), async (req, res) => {
+    const id = String(req.params.id)
+
+    if (!req.file) {
+      res.status(400).json({ error: '请选择要上传的照片' })
+      return
+    }
+
+    try {
+      // 获取学生信息
+      const student = repo.get(id)
+      if (!student) {
+        res.status(404).json({ error: 'Student not found' })
+        return
+      }
+
+      // 生成最终文件路径
+      const relativePath = generatePhotoPath(student.cohort, id, req.file.originalname)
+      const finalDir = path.join(uploadDir, student.cohort)
+      const finalPath = path.join(uploadDir, relativePath)
+
+      // 确保目录存在
+      await ensureDirectory(finalDir)
+
+      // 压缩图片
+      const result = await compressImage(req.file.path, finalPath)
+
+      // 删除临时文件
+      const fs = await import('node:fs/promises')
+      await fs.unlink(req.file.path).catch(() => {})
+
+      // 更新学生的 photo 字段
+      const photoUrl = `/uploads/students/${relativePath.replace(/\\/g, '/')}`
+      const updated = repo.update(id, { ...student, photo: photoUrl })
+
+      if (!updated) {
+        res.status(500).json({ error: '更新学生照片失败' })
+        return
+      }
+
+      res.json({
+        photo: photoUrl,
+        originalSize: result.originalSize,
+        compressedSize: result.compressedSize,
+        saved: result.saved,
+      })
+    } catch (error) {
+      // 清理临时文件
+      const fs = await import('node:fs/promises')
+      await fs.unlink(req.file.path).catch(() => {})
+
+      if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+          res.status(400).json({ error: '文件大小超过限制（最大 5MB）' })
+          return
+        }
+      }
+
+      console.error('Photo upload error:', error)
+      res.status(500).json({ error: '照片上传失败' })
+    }
   })
 
   return router

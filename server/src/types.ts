@@ -27,4 +27,5 @@ export interface ServerConfig {
   jwtSecret: string
   sqlitePath: string
   corsOrigin: string
+  uploadDir: string
 }

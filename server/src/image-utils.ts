@@ -1,0 +1,88 @@
+import sharp from 'sharp'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+
+const MAX_DIMENSION = 1200
+const QUALITY = 82
+const THRESHOLD_BYTES = 800 * 1024 // 800KB
+
+export interface CompressResult {
+  path: string
+  originalSize: number
+  compressedSize: number
+  saved: boolean
+}
+
+export async function compressImage(inputPath: string, outputPath?: string): Promise<CompressResult> {
+  const output = outputPath ?? inputPath
+  const stats = await fs.stat(inputPath)
+  const originalSize = stats.size
+
+  // 如果文件小于阈值，直接返回
+  if (originalSize <= THRESHOLD_BYTES) {
+    if (inputPath !== output) {
+      await fs.copyFile(inputPath, output)
+    }
+    return {
+      path: output,
+      originalSize,
+      compressedSize: originalSize,
+      saved: false,
+    }
+  }
+
+  // 获取图片信息
+  const metadata = await sharp(inputPath).metadata()
+  const { width, height } = metadata
+
+  // 计算新的尺寸
+  let newWidth = width ?? MAX_DIMENSION
+  let newHeight = height ?? MAX_DIMENSION
+
+  if (newWidth > MAX_DIMENSION || newHeight > MAX_DIMENSION) {
+    const ratio = Math.min(MAX_DIMENSION / (newWidth || 1), MAX_DIMENSION / (newHeight || 1))
+    newWidth = Math.round(newWidth * ratio)
+    newHeight = Math.round(newHeight * ratio)
+  }
+
+  // 构建压缩管道
+  const pipeline = sharp(inputPath)
+    .rotate()
+    .resize(newWidth, newHeight, {
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+
+  // 根据输出格式设置压缩参数
+  const ext = path.extname(output).toLowerCase()
+  if (ext === '.jpg' || ext === '.jpeg') {
+    await pipeline.jpeg({ quality: QUALITY, mozjpeg: true }).toFile(output)
+  } else if (ext === '.png') {
+    await pipeline.png({ compressionLevel: 9, adaptiveFiltering: true }).toFile(output)
+  } else if (ext === '.webp') {
+    await pipeline.webp({ quality: QUALITY, effort: 4 }).toFile(output)
+  } else {
+    // 默认使用 JPEG
+    await pipeline.jpeg({ quality: QUALITY, mozjpeg: true }).toFile(output)
+  }
+
+  const compressedStats = await fs.stat(output)
+
+  return {
+    path: output,
+    originalSize,
+    compressedSize: compressedStats.size,
+    saved: compressedStats.size < originalSize,
+  }
+}
+
+export async function ensureDirectory(dirPath: string): Promise<void> {
+  await fs.mkdir(dirPath, { recursive: true })
+}
+
+export function generatePhotoPath(cohort: string, studentId: string, originalName: string): string {
+  const ext = path.extname(originalName).toLowerCase() || '.jpg'
+  const timestamp = Date.now()
+  const filename = `${studentId}-${timestamp}${ext}`
+  return path.join(cohort, filename)
+}
