@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Upload, X, ImageIcon } from 'lucide-vue-next'
+import { resolvePhotoUrl } from '../utils/publicAsset'
 
 interface Props {
   modelValue?: string
@@ -127,7 +128,7 @@ function getInitials(name: string) {
       @drop="handleDrop"
     >
       <div v-if="hasPhoto" class="photo-preview">
-        <img :src="previewUrl" :alt="memberName" />
+        <img :src="resolvePhotoUrl(previewUrl)" :alt="memberName" />
         <button
           type="button"
           class="remove-btn"
