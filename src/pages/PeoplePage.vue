@@ -19,7 +19,7 @@ import {
 import { studentProfiles, type StudentProfile, type StudentStatus } from '../data/students/index'
 import { memberApi } from '../utils/api'
 import { useAuth } from '../utils/useAuth'
-import { publicAsset } from '../utils/publicAsset'
+import { publicAsset, resolvePhotoUrl } from '../utils/publicAsset'
 import PhotoUploader from '../components/PhotoUploader.vue'
 
 type EditorMode = 'create' | 'edit'
@@ -533,7 +533,7 @@ onMounted(() => {
               <article v-for="member in group.members" :key="member.id" class="member-card">
                 <button type="button" class="member-card-main" @click="selectMember(member)">
                   <div class="member-photo">
-                    <img v-if="member.photo" :src="member.photo" :alt="member.name" />
+                    <img v-if="member.photo" :src="resolvePhotoUrl(member.photo)" :alt="member.name" />
                     <span v-else>{{ initials(member.name) }}</span>
                   </div>
                   <div class="member-info">
@@ -599,7 +599,7 @@ onMounted(() => {
         <div class="modal-info">
           <div class="modal-header">
             <div class="modal-avatar">
-              <img v-if="selectedMember.photo" :src="selectedMember.photo" :alt="selectedMember.name" />
+              <img v-if="selectedMember.photo" :src="resolvePhotoUrl(selectedMember.photo)" :alt="selectedMember.name" />
               <span v-else>{{ initials(selectedMember.name) }}</span>
             </div>
             <div class="modal-header-text">
@@ -678,7 +678,7 @@ onMounted(() => {
         </div>
 
         <div class="modal-photo">
-          <img v-if="selectedMember.photo" :src="selectedMember.photo" :alt="selectedMember.name" />
+          <img v-if="selectedMember.photo" :src="resolvePhotoUrl(selectedMember.photo)" :alt="selectedMember.name" />
           <span v-else class="modal-photo-initials">{{ initials(selectedMember.name) }}</span>
         </div>
       </div>
