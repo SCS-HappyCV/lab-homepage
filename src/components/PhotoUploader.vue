@@ -2,11 +2,13 @@
 import { ref, computed, watch } from 'vue'
 import { Upload, X, ImageIcon } from 'lucide-vue-next'
 import { resolvePhotoUrl } from '../utils/publicAsset'
+import ImageCropper from './ImageCropper.vue'
 
 interface Props {
   modelValue?: string
   memberId: string
   memberName: string
+  mode?: 'avatar' | 'cover'
 }
 
 interface Emits {
@@ -17,6 +19,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
+  mode: 'avatar',
 })
 const emit = defineEmits<Emits>()
 
@@ -25,6 +28,14 @@ const isUploading = ref(false)
 const uploadProgress = ref(0)
 const errorMessage = ref('')
 const previewUrl = ref(props.modelValue)
+
+// 裁剪相关
+const showCropper = ref(false)
+const cropperFile = ref<File | null>(null)
+
+const aspectRatio = computed(() => props.mode === 'cover' ? 2 / 3 : 13 / 16)
+const outputWidth = computed(() => props.mode === 'cover' ? 800 : 650)
+const outputHeight = computed(() => props.mode === 'cover' ? 1200 : 800)
 
 watch(() => props.modelValue, (newVal) => {
   previewUrl.value = newVal ?? ''
@@ -47,19 +58,19 @@ function handleDrop(e: DragEvent) {
 
   const files = e.dataTransfer?.files
   if (files && files.length > 0) {
-    handleFile(files[0])
+    prepareFile(files[0])
   }
 }
 
 function handleFileInput(e: Event) {
   const input = e.target as HTMLInputElement
   if (input.files && input.files.length > 0) {
-    handleFile(input.files[0])
+    prepareFile(input.files[0])
     input.value = ''
   }
 }
 
-async function handleFile(file: File) {
+function prepareFile(file: File) {
   // 验证文件类型
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
@@ -68,13 +79,33 @@ async function handleFile(file: File) {
     return
   }
 
-  // 验证文件大小（5MB）
-  if (file.size > 5 * 1024 * 1024) {
-    errorMessage.value = '文件大小超过限制（最大 5MB）'
+  // 验证文件大小（10MB，裁剪前允许更大）
+  if (file.size > 10 * 1024 * 1024) {
+    errorMessage.value = '文件大小超过限制（最大 10MB）'
     emit('upload-error', errorMessage.value)
     return
   }
 
+  errorMessage.value = ''
+  cropperFile.value = file
+  showCropper.value = true
+}
+
+function handleCrop(blob: Blob) {
+  showCropper.value = false
+  cropperFile.value = null
+
+  // 将 blob 转为 File
+  const croppedFile = new File([blob], 'cropped.jpg', { type: 'image/jpeg' })
+  uploadCroppedFile(croppedFile)
+}
+
+function handleCropCancel() {
+  showCropper.value = false
+  cropperFile.value = null
+}
+
+async function uploadCroppedFile(file: File) {
   errorMessage.value = ''
   isUploading.value = true
   uploadProgress.value = 0
@@ -88,7 +119,13 @@ async function handleFile(file: File) {
     }, 100)
 
     const { memberApi } = await import('../utils/api')
-    const result = await memberApi.uploadPhoto(props.memberId, file)
+
+    let result: { photo: string }
+    if (props.mode === 'cover') {
+      result = await memberApi.uploadCoverPhoto(props.memberId, file)
+    } else {
+      result = await memberApi.uploadPhoto(props.memberId, file)
+    }
 
     clearInterval(progressInterval)
     uploadProgress.value = 100
@@ -119,7 +156,7 @@ function getInitials(name: string) {
 </script>
 
 <template>
-  <div class="photo-uploader">
+  <div class="photo-uploader" :class="[`mode-${mode}`]">
     <div
       class="upload-area"
       :class="{ dragging: isDragging, 'has-photo': hasPhoto }"
@@ -129,25 +166,36 @@ function getInitials(name: string) {
     >
       <div v-if="hasPhoto" class="photo-preview">
         <img :src="resolvePhotoUrl(previewUrl)" :alt="memberName" />
-        <button
-          type="button"
-          class="remove-btn"
-          :disabled="isUploading"
-          @click="removePhoto"
-        >
-          <X :size="16" />
-        </button>
+        <div class="photo-overlay">
+          <button
+            type="button"
+            class="overlay-btn remove"
+            :disabled="isUploading"
+            title="移除"
+            @click="removePhoto"
+          >
+            <X :size="16" />
+          </button>
+        </div>
       </div>
       <div v-else class="upload-placeholder">
-        <div class="initials-avatar">
-          {{ getInitials(memberName) }}
+        <div class="initials-avatar" :class="{ wide: mode === 'cover' }">
+          <template v-if="mode === 'cover'">
+            <ImageIcon :size="24" />
+          </template>
+          <template v-else>
+            {{ getInitials(memberName) }}
+          </template>
         </div>
         <div class="upload-hint">
           <Upload :size="20" />
-          <span>点击或拖拽上传照片</span>
-          <span class="upload-spec">支持 jpg、png、webp，最大 5MB</span>
+          <span>{{ mode === 'cover' ? '点击或拖拽上传背景图' : '点击或拖拽上传照片' }}</span>
+          <span class="upload-spec">
+            {{ mode === 'cover' ? '裁剪为 2:3 竖向' : '裁剪为 13:16 竖向' }} · 支持 jpg、png、webp
+          </span>
         </div>
         <input
+          ref="fileInput"
           type="file"
           accept="image/jpeg,image/png,image/webp"
           :disabled="isUploading"
@@ -164,6 +212,17 @@ function getInitials(name: string) {
     </div>
 
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+    <!-- 裁剪弹窗 -->
+    <ImageCropper
+      v-if="showCropper && cropperFile"
+      :file="cropperFile"
+      :aspect-ratio="aspectRatio"
+      :output-width="outputWidth"
+      :output-height="outputHeight"
+      @crop="handleCrop"
+      @cancel="handleCropCancel"
+    />
   </div>
 </template>
 
@@ -195,10 +254,25 @@ function getInitials(name: string) {
   border-color: var(--line);
 }
 
-.photo-preview {
+/* 头像模式预览 */
+.mode-avatar .photo-preview {
+  position: relative;
+  width: 104px;
+  height: 128px;
+  margin: 12px auto;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 背景模式预览 */
+.mode-cover .photo-preview {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
+  height: 180px;
+}
+
+.mode-cover .photo-preview img {
+  object-fit: contain;
 }
 
 .photo-preview img {
@@ -207,30 +281,48 @@ function getInitials(name: string) {
   object-fit: cover;
 }
 
-.remove-btn {
+.photo-overlay {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 28px;
-  height: 28px;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.4);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 
-.photo-preview:hover .remove-btn {
+.photo-preview:hover .photo-overlay {
   opacity: 1;
 }
 
-.remove-btn:hover {
-  background: rgba(0, 0, 0, 0.8);
+.overlay-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.overlay-btn:hover {
+  background: white;
+  transform: scale(1.1);
+}
+
+.overlay-btn.remove {
+  background: rgba(220, 50, 50, 0.9);
+  color: white;
+}
+
+.overlay-btn.remove:hover {
+  background: rgba(200, 30, 30, 1);
 }
 
 .upload-placeholder {
@@ -240,6 +332,10 @@ function getInitials(name: string) {
   justify-content: center;
   padding: 24px;
   min-height: 160px;
+}
+
+.mode-cover .upload-placeholder {
+  min-height: 200px;
 }
 
 .upload-placeholder input[type="file"] {
@@ -254,7 +350,7 @@ function getInitials(name: string) {
 
 .initials-avatar {
   width: 72px;
-  height: 72px;
+  height: 88px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -262,8 +358,15 @@ function getInitials(name: string) {
   color: white;
   font-size: 22px;
   font-weight: 800;
-  border-radius: 10px;
+  border-radius: 8px;
   margin-bottom: 12px;
+}
+
+.initials-avatar.wide {
+  width: 120px;
+  height: 60px;
+  border-radius: 8px;
+  font-size: 16px;
 }
 
 .upload-hint {

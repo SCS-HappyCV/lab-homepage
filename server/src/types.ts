@@ -12,6 +12,7 @@ export interface StudentRecord {
   wechat?: string
   nativePlace?: string
   photo?: string
+  coverPhoto?: string
   destination?: string
   bio: string
   achievements: string[]

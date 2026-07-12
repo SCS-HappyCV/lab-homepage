@@ -52,9 +52,9 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
       db.prepare(
         `INSERT INTO students (
           id, name, cohort, degree, status, research, email, phone, wechat,
-          nativePlace, photo, destination, bio, achievements, experiences,
+          nativePlace, photo, coverPhoto, destination, bio, achievements, experiences,
           sortOrder, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         row.id,
         row.name,
@@ -67,6 +67,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         row.wechat ?? '',
         row.nativePlace ?? '',
         row.photo ?? '',
+        row.coverPhoto ?? '',
         row.destination ?? '',
         row.bio,
         row.achievements,
@@ -89,7 +90,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         `UPDATE students SET
           name = ?, cohort = ?, degree = ?, status = ?, research = ?,
           email = ?, phone = ?, wechat = ?, nativePlace = ?, photo = ?,
-          destination = ?, bio = ?, achievements = ?, experiences = ?,
+          coverPhoto = ?, destination = ?, bio = ?, achievements = ?, experiences = ?,
           sortOrder = ?, createdAt = ?, updatedAt = ?
         WHERE id = ?`,
       ).run(
@@ -103,6 +104,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         row.wechat ?? '',
         row.nativePlace ?? '',
         row.photo ?? '',
+        row.coverPhoto ?? '',
         row.destination ?? '',
         row.bio,
         row.achievements,

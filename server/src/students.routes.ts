@@ -94,7 +94,7 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
     res.status(204).send()
   })
 
-  // 照片上传接口
+  // 照片上传接口（头像）
   router.post('/students/:id/photo', adminOnly, upload.single('photo'), async (req, res) => {
     const id = String(req.params.id)
 
@@ -112,7 +112,7 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
       }
 
       // 生成最终文件路径
-      const relativePath = generatePhotoPath(student.cohort, id, req.file.originalname)
+      const relativePath = generatePhotoPath(student.cohort, id, req.file.originalname, 'avatar')
       const finalDir = path.join(uploadDir, student.cohort)
       const finalPath = path.join(uploadDir, relativePath)
 
@@ -158,6 +158,62 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
     }
   })
 
+  // 背景图上传接口
+  router.post('/students/:id/cover-photo', adminOnly, upload.single('photo'), async (req, res) => {
+    const id = String(req.params.id)
+
+    if (!req.file) {
+      res.status(400).json({ error: '请选择要上传的照片' })
+      return
+    }
+
+    try {
+      const student = repo.get(id)
+      if (!student) {
+        res.status(404).json({ error: 'Student not found' })
+        return
+      }
+
+      const relativePath = generatePhotoPath(student.cohort, id, req.file.originalname, 'cover')
+      const finalDir = path.join(uploadDir, student.cohort)
+      const finalPath = path.join(uploadDir, relativePath)
+
+      await ensureDirectory(finalDir)
+      const result = await compressImage(req.file.path, finalPath)
+
+      const fs = await import('node:fs/promises')
+      await fs.unlink(req.file.path).catch(() => {})
+
+      const photoUrl = `/uploads/students/${relativePath.replace(/\\/g, '/')}`
+      const updated = repo.update(id, { ...student, coverPhoto: photoUrl })
+
+      if (!updated) {
+        res.status(500).json({ error: '更新背景图失败' })
+        return
+      }
+
+      res.json({
+        photo: photoUrl,
+        originalSize: result.originalSize,
+        compressedSize: result.compressedSize,
+        saved: result.saved,
+      })
+    } catch (error) {
+      const fs = await import('node:fs/promises')
+      await fs.unlink(req.file.path).catch(() => {})
+
+      if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+          res.status(400).json({ error: '文件大小超过限制（最大 5MB）' })
+          return
+        }
+      }
+
+      console.error('Cover photo upload error:', error)
+      res.status(500).json({ error: '背景图上传失败' })
+    }
+  })
+
   return router
 }
 
@@ -176,6 +232,7 @@ function withDefaults(input: Partial<StudentRecord>, forcedId?: string): Student
     wechat: String(input.wechat ?? ''),
     nativePlace: String(input.nativePlace ?? ''),
     photo: String(input.photo ?? ''),
+    coverPhoto: String(input.coverPhoto ?? ''),
     destination: String(input.destination ?? ''),
     bio: String(input.bio ?? ''),
     achievements: asStringArray(input.achievements),

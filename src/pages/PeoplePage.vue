@@ -24,6 +24,7 @@ import PhotoUploader from '../components/PhotoUploader.vue'
 
 type EditorMode = 'create' | 'edit'
 type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experiences'> & {
+  coverPhoto: string
   researchText: string
   achievementsText: string
   experiencesText: string
@@ -34,10 +35,10 @@ const allCohorts = '全部'
 const members = ref<StudentProfile[]>(studentProfiles)
 const apiError = ref('')
 const isLoadingMembers = ref(false)
-const activeCohort = ref(allCohorts)
+const activeCohorts = ref<string[]>([allCohorts])
 const searchText = ref('')
 const statusFilter = ref<'全部' | 'current' | 'alumni'>('全部')
-const cohortSortAsc = ref(true)
+const cohortSortAsc = ref(false)
 const nameSortAsc = ref(true)
 const selectedMember = ref<StudentProfile | null>(null)
 const bioExpanded = ref(false)
@@ -56,6 +57,26 @@ function toggleCohortSort() {
 
 function toggleNameSort() {
   nameSortAsc.value = !nameSortAsc.value
+}
+
+function toggleCohortSelection(cohort: string) {
+  if (cohort === allCohorts) {
+    // 点击"全部"时，清除其他选择，只选"全部"
+    activeCohorts.value = [allCohorts]
+  } else {
+    // 移除"全部"选项
+    const filtered = activeCohorts.value.filter((c) => c !== allCohorts)
+
+    if (filtered.includes(cohort)) {
+      // 如果已选中，则取消选中
+      const newSelection = filtered.filter((c) => c !== cohort)
+      // 如果取消后没有选中任何项，则恢复"全部"
+      activeCohorts.value = newSelection.length > 0 ? newSelection : [allCohorts]
+    } else {
+      // 如果未选中，则添加选中
+      activeCohorts.value = [...filtered, cohort]
+    }
+  }
 }
 const editorMode = ref<EditorMode>('create')
 const isEditorOpen = ref(false)
@@ -190,7 +211,7 @@ const filteredMembers = computed(() => {
 
   return members.value.filter((member) => {
     const matchesStatus = statusFilter.value === '全部' || member.status === statusFilter.value
-    const matchesCohort = activeCohort.value === allCohorts || member.cohort === activeCohort.value
+    const matchesCohort = activeCohorts.value.includes(allCohorts) || activeCohorts.value.includes(member.cohort)
     const text = [
       member.name,
       member.cohort,
@@ -321,6 +342,10 @@ function handlePhotoUploadSuccess(photo: string) {
   editorForm.value.photo = photo
 }
 
+function handleCoverPhotoUploadSuccess(photo: string) {
+  editorForm.value.coverPhoto = photo
+}
+
 function handlePhotoUploadError(error: string) {
   editorError.value = error
 }
@@ -380,6 +405,7 @@ function createEmptyForm(): MemberForm {
     wechat: '',
     nativePlace: '',
     photo: '',
+    coverPhoto: '',
     destination: '',
     bio: '',
     achievementsText: '',
@@ -394,6 +420,7 @@ function toForm(member: StudentProfile): MemberForm {
     wechat: member.wechat ?? '',
     nativePlace: member.nativePlace ?? '',
     photo: member.photo ?? '',
+    coverPhoto: member.coverPhoto ?? '',
     destination: member.destination ?? '',
     researchText: member.research.join('\n'),
     achievementsText: member.achievements.join('\n'),
@@ -416,6 +443,7 @@ function fromForm(form: MemberForm): StudentProfile {
     wechat: form.wechat?.trim(),
     nativePlace: form.nativePlace?.trim(),
     photo: form.photo?.trim(),
+    coverPhoto: form.coverPhoto?.trim(),
     destination: form.destination?.trim(),
     bio: form.bio.trim(),
     achievements: lines(form.achievementsText),
@@ -513,13 +541,13 @@ onMounted(() => {
             v-for="cohort in cohorts"
             :key="cohort"
             type="button"
-            :class="{ active: activeCohort === cohort }"
-            @click="activeCohort = cohort"
+            :class="{ active: activeCohorts.includes(cohort) }"
+            @click="toggleCohortSelection(cohort)"
           >
             <span>{{ cohort }}</span>
             <ChevronRight :size="16" />
           </button>
-          <p>成员信息按届别归档。认证后可在本页新增、编辑或删除成员资料。</p>
+          <p>成员信息按届别归档。可同时选择多届。认证后可在本页新增、编辑或删除成员资料。</p>
         </aside>
 
         <div class="member-groups">
@@ -583,7 +611,7 @@ onMounted(() => {
           <div v-if="groupedMembers.length === 0" class="empty-state">
             <UserRound :size="36" />
             <h3>没有匹配的成员</h3>
-            <p>可以清空搜索词，或切换届别筛选。</p>
+            <p>可以清空搜索词，或调整届别筛选。</p>
           </div>
         </div>
       </div>
@@ -678,7 +706,8 @@ onMounted(() => {
         </div>
 
         <div class="modal-photo">
-          <img v-if="selectedMember.photo" :src="resolvePhotoUrl(selectedMember.photo)" :alt="selectedMember.name" />
+          <img v-if="selectedMember.coverPhoto" :src="resolvePhotoUrl(selectedMember.coverPhoto)" :alt="selectedMember.name" />
+          <img v-else-if="selectedMember.photo" :src="resolvePhotoUrl(selectedMember.photo)" :alt="selectedMember.name" />
           <span v-else class="modal-photo-initials">{{ initials(selectedMember.name) }}</span>
         </div>
       </div>
@@ -696,12 +725,25 @@ onMounted(() => {
         </div>
 
         <div v-if="editorMode === 'edit'" class="editor-photo-section">
-          <span class="editor-section-label">成员照片</span>
+          <span class="editor-section-label">成员头像</span>
           <PhotoUploader
             v-model="editorForm.photo"
             :member-id="editorForm.id"
             :member-name="editorForm.name"
+            mode="avatar"
             @upload-success="handlePhotoUploadSuccess"
+            @upload-error="handlePhotoUploadError"
+          />
+        </div>
+
+        <div v-if="editorMode === 'edit'" class="editor-photo-section">
+          <span class="editor-section-label">背景图片</span>
+          <PhotoUploader
+            v-model="editorForm.coverPhoto"
+            :member-id="editorForm.id"
+            :member-name="editorForm.name"
+            mode="cover"
+            @upload-success="handleCoverPhotoUploadSuccess"
             @upload-error="handlePhotoUploadError"
           />
         </div>

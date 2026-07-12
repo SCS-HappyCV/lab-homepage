@@ -28,6 +28,7 @@ export function initDatabase(db: AppDatabase) {
       wechat TEXT,
       nativePlace TEXT,
       photo TEXT,
+      coverPhoto TEXT,
       destination TEXT,
       bio TEXT NOT NULL,
       achievements TEXT NOT NULL,
@@ -37,4 +38,11 @@ export function initDatabase(db: AppDatabase) {
       updatedAt TEXT NOT NULL
     )
   `)
+
+  // 为已有数据库添加 coverPhoto 列（兼容旧数据库）
+  try {
+    db.exec(`ALTER TABLE students ADD COLUMN coverPhoto TEXT`)
+  } catch {
+    // 列已存在，忽略错误
+  }
 }
