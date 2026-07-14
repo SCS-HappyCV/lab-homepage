@@ -14,6 +14,76 @@ export interface MemberApiOptions {
   fetchImpl?: typeof fetch
 }
 
+export interface Patent {
+  id: number
+  title: string
+  patent_number: string
+  inventors: string[]
+  patent_type: '发明' | '实用新型' | '外观设计'
+  pdf_path: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PaginatedResult<T> {
+  data: T[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+}
+
+// 专利识别相关类型
+export type PatentType = 'INVENTION' | 'UTILITY_MODEL' | 'DESIGN' | 'UNKNOWN'
+export type NumberType = 'PATENT_NUMBER' | 'AUTHORIZATION_NUMBER' | 'PUBLICATION_NUMBER' | 'APPLICATION_NUMBER'
+
+export interface FieldResult {
+  value: string | string[] | null
+  confidence: number
+  source: string
+  evidence: string
+  needsReview: boolean
+  conflicts: any[]
+}
+
+export interface PatentNumberFieldResult extends FieldResult {
+  numberType: NumberType | null
+  candidates: { value: string; numberType: string; label: string }[]
+}
+
+export interface RecognitionWarning {
+  field: string
+  code: string
+  message: string
+}
+
+export interface RecognizeResponse {
+  recognitionId: string
+  fileId: string
+  fileName: string
+  fileSize: number
+  recognitionStatus: string
+  recognitionMethod: string[]
+  patentName: FieldResult
+  inventors: FieldResult
+  patentType: FieldResult & { displayValue: string }
+  patentNumber: PatentNumberFieldResult
+  needsManualReview: boolean
+  warnings: RecognitionWarning[]
+}
+
+export interface ConfirmPatentRequest {
+  recognitionId: string
+  fileId: string
+  patentName: string
+  inventors: string[]
+  patentType: PatentType
+  patentNumber: string
+  numberType: NumberType
+}
+
 export function browserTokenStorage(): TokenStorage {
   return {
     getToken() {
@@ -72,7 +142,17 @@ export function createMemberApi({ baseUrl, storage, fetchImpl = fetch }: MemberA
     })
 
     if (!response.ok) {
-      throw new Error(`API request failed with ${response.status}`)
+      // 尝试读取后端返回的错误消息
+      try {
+        const errorData = await response.json()
+        throw new Error(errorData.message || errorData.error || `请求失败 (${response.status})`)
+      } catch (e) {
+        // 如果无法解析JSON，使用默认错误消息
+        if (e instanceof Error && e.message.includes('请求失败')) {
+          throw e
+        }
+        throw new Error(`请求失败 (${response.status})`)
+      }
     }
 
     if (response.status === 204) return undefined as T
@@ -165,6 +245,88 @@ export function createMemberApi({ baseUrl, storage, fetchImpl = fetch }: MemberA
       }
 
       return response.json()
+    },
+
+    // 专利相关API
+    listPatents(page: number = 1, pageSize: number = 10) {
+      return requestJson<PaginatedResult<Patent>>(`/patents?page=${page}&pageSize=${pageSize}`)
+    },
+
+    getPatent(id: number) {
+      return requestJson<Patent>(`/patents/${id}`)
+    },
+
+    getPatentDownloadUrl(id: number): string {
+      return `${normalizedBaseUrl}/patents/${id}/download`
+    },
+
+    getPatentPreviewUrl(id: number): string {
+      return `${normalizedBaseUrl}/patents/${id}/preview`
+    },
+
+    deletePatent(id: string) {
+      return requestJson<void>(`/patents/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      })
+    },
+
+    // 专利识别API
+    async recognizePatent(file: File, signal?: AbortSignal): Promise<RecognizeResponse> {
+      if (!normalizedBaseUrl) {
+        throw new Error('VITE_API_BASE_URL is not configured')
+      }
+
+      console.log('Starting patent recognition...', {
+        fileName: file.name,
+        fileSize: file.size,
+        baseUrl: normalizedBaseUrl,
+      })
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      try {
+        const response = await fetchImpl(`${normalizedBaseUrl}/patents/recognize`, {
+          method: 'POST',
+          headers: {
+            Authorization: storage.getToken() ? `Bearer ${storage.getToken()}` : '',
+          },
+          body: formData,
+          signal,
+        })
+
+        console.log('Recognition response status:', response.status)
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ message: 'Recognition failed' }))
+          console.error('Recognition error:', error)
+          throw new Error(error.message || `Recognition failed with ${response.status}`)
+        }
+
+        const result = await response.json()
+        console.log('Recognition result:', result)
+        return result.data
+      } catch (err) {
+        console.error('Recognition request failed:', err)
+        throw err
+      }
+    },
+
+    async confirmPatent(data: ConfirmPatentRequest): Promise<{ id: string }> {
+      return requestJson<{ id: string }>('/patents/confirm', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+    },
+
+    async getRecognition(id: string): Promise<any> {
+      return requestJson<any>(`/patents/recognitions/${id}`)
+    },
+
+    async cancelRecognition(id: string): Promise<void> {
+      return requestJson<void>(`/patents/recognitions/${id}`, {
+        method: 'DELETE',
+      })
     },
   }
 }

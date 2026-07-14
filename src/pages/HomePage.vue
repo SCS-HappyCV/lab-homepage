@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   ArrowUpRight,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-vue-next'
 import { sortedGalleryItems } from '../data/gallery/index'
 import { publicAsset } from '../utils/publicAsset'
+import PatentModal from '../components/PatentModal.vue'
 
 const heroGroup = publicAsset('gallery/lab/hero-group.jpg')
 
@@ -49,10 +51,19 @@ const workItems = [
   { title: '论文', meta: 'Publications', status: '持续更新', icon: BookOpen },
   { title: '数据集', meta: 'Datasets', status: '整理中', icon: Database },
   { title: '软件', meta: 'Software', status: '开放计划中', icon: Code2 },
-  { title: '专利', meta: 'Patents', status: '持续沉淀', icon: FileBadge2 },
+  { title: '专利', meta: 'Patents', status: '持续沉淀', icon: FileBadge2, clickable: true },
 ]
 
 const homeGallery = sortedGalleryItems.slice(0, 3)
+
+// 专利弹窗状态
+const showPatentModal = ref(false)
+
+function handleWorkItemClick(item: typeof workItems[0]) {
+  if (item.clickable) {
+    showPatentModal.value = true
+  }
+}
 </script>
 
 <template>
@@ -117,7 +128,13 @@ const homeGallery = sortedGalleryItems.slice(0, 3)
         <p>集中展示团队在论文、数据集、软件工具与知识产权等方面的阶段性成果。</p>
       </div>
       <div class="work-list">
-        <article v-for="item in workItems" :key="item.title" class="work-item">
+        <article
+          v-for="item in workItems"
+          :key="item.title"
+          class="work-item"
+          :data-patent="item.clickable ? '' : undefined"
+          @click="handleWorkItemClick(item)"
+        >
           <div class="work-icon">
             <component :is="item.icon" :size="24" />
           </div>
@@ -129,6 +146,12 @@ const homeGallery = sortedGalleryItems.slice(0, 3)
         </article>
       </div>
     </section>
+
+    <!-- 专利弹窗 -->
+    <PatentModal
+      :visible="showPatentModal"
+      @close="showPatentModal = false"
+    />
 
     <section id="team" class="section-block team-section" aria-labelledby="team-title">
       <div class="section-heading">

@@ -33,9 +33,9 @@ const previewUrl = ref(props.modelValue)
 const showCropper = ref(false)
 const cropperFile = ref<File | null>(null)
 
-const aspectRatio = computed(() => props.mode === 'cover' ? 2 / 3 : 13 / 16)
-const outputWidth = computed(() => props.mode === 'cover' ? 800 : 650)
-const outputHeight = computed(() => props.mode === 'cover' ? 1200 : 800)
+const aspectRatio = computed(() => props.mode === 'cover' ? 9 / 16 : 5 / 7)
+const outputWidth = computed(() => props.mode === 'cover' ? 720 : 500)
+const outputHeight = computed(() => props.mode === 'cover' ? 1280 : 700)
 
 watch(() => props.modelValue, (newVal) => {
   previewUrl.value = newVal ?? ''
@@ -191,7 +191,7 @@ function getInitials(name: string) {
           <Upload :size="20" />
           <span>{{ mode === 'cover' ? '点击或拖拽上传背景图' : '点击或拖拽上传照片' }}</span>
           <span class="upload-spec">
-            {{ mode === 'cover' ? '裁剪为 2:3 竖向' : '裁剪为 13:16 竖向' }} · 支持 jpg、png、webp
+            {{ mode === 'cover' ? '裁剪为 9:16 竖向' : '裁剪为 5:7 证件照' }} · 支持 jpg、png、webp
           </span>
         </div>
         <input
@@ -257,8 +257,8 @@ function getInitials(name: string) {
 /* 头像模式预览 */
 .mode-avatar .photo-preview {
   position: relative;
-  width: 104px;
-  height: 128px;
+  width: 100px;
+  height: 140px;
   margin: 12px auto;
   border-radius: 8px;
   overflow: hidden;
@@ -268,7 +268,7 @@ function getInitials(name: string) {
 .mode-cover .photo-preview {
   position: relative;
   width: 100%;
-  height: 180px;
+  height: 200px;
 }
 
 .mode-cover .photo-preview img {
@@ -349,14 +349,14 @@ function getInitials(name: string) {
 }
 
 .initials-avatar {
-  width: 72px;
-  height: 88px;
+  width: 60px;
+  height: 84px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #10201c, #087c89 54%, #b7791f);
   color: white;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   border-radius: 8px;
   margin-bottom: 12px;

@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'lab-homepage-api',
-      script: 'npx',
-      args: 'tsx src/server.ts',
+      script: '/var/www/lab-homepage/server/node_modules/.bin/tsx',
+      args: 'src/server.ts',
       cwd: '/var/www/lab-homepage/server',
       instances: 1,
       exec_mode: 'fork',

@@ -6,6 +6,8 @@ import { loadConfig } from './config.js'
 import { openDatabase } from './db.js'
 import { createStudentRepository } from './students.repo.js'
 import { createStudentRouter } from './students.routes.js'
+import { createPatentRouter } from './patents.routes.js'
+import { createPatentRecognitionRouter } from './patent/patent-recognition.routes.js'
 import type { ServerConfig } from './types.js'
 
 export interface AppOptions {
@@ -44,8 +46,19 @@ export function createApp(options: Partial<AppOptions> = {}) {
   const db = openDatabase(config.sqlitePath)
   const studentRepo = createStudentRepository(db)
 
+  // 专利识别模块配置
+  const patentUploadDir = process.env.PATENT_UPLOAD_DIR || path.join(process.cwd(), 'data', 'patents')
+  const patentTempDir = process.env.PATENT_TEMP_DIR || path.join(process.cwd(), 'data', 'patents', 'temp')
+
   registerAuthRoutes(app, authService)
   app.use(createStudentRouter({ repo: studentRepo, authService, uploadDir: config.uploadDir }))
+  app.use(createPatentRouter({ db, authService, uploadDir: config.uploadDir }))
+  app.use(createPatentRecognitionRouter({
+    db,
+    authService,
+    uploadDir: patentUploadDir,
+    tempDir: patentTempDir,
+  }))
 
   app.get('/health', (_req, res) => {
     res.json({ ok: true, service: 'lab-homepage-api' })

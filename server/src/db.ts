@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { migratePatentTables } from './patent/migration.js'
 
 export type AppDatabase = DatabaseSync
 
@@ -45,4 +46,7 @@ export function initDatabase(db: AppDatabase) {
   } catch {
     // 列已存在，忽略错误
   }
+
+  // 执行专利模块迁移（创建 patents_simple 等表）
+  migratePatentTables(db)
 }

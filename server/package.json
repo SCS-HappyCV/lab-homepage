@@ -10,7 +10,16 @@
     "test": "tsx --test test/**/*.test.ts",
     "db:import": "tsx scripts/import-students.ts",
     "db:export": "tsx scripts/export-students.ts",
-    "db:import-json": "tsx scripts/import-json.ts"
+    "db:import-json": "tsx scripts/import-json.ts",
+    "db:import-patents": "tsx scripts/import-patents.ts",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop lab-homepage-server",
+    "pm2:restart": "pm2 restart lab-homepage-server",
+    "pm2:delete": "pm2 delete lab-homepage-server",
+    "pm2:logs": "pm2 logs lab-homepage-server",
+    "pm2:status": "pm2 status",
+    "deploy": "./deploy.sh",
+    "update": "./update.sh"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -18,7 +27,10 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
-    "sharp": "^0.35.3"
+    "pdf-parse": "^2.4.5",
+    "sharp": "^0.35.3",
+    "tesseract.js": "^5.1.1",
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -27,6 +39,7 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^22.10.2",
     "@types/supertest": "^6.0.2",
+    "@types/uuid": "^10.0.0",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",
     "typescript": "~6.0.2"
