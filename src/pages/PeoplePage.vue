@@ -299,6 +299,11 @@ function clearSelectedMember() {
   bioExpanded.value = false
 }
 
+const hasContactInfo = computed(() => {
+  if (!selectedMember.value) return false
+  return !!(selectedMember.value.phone || selectedMember.value.email)
+})
+
 async function loadMembers() {
   isLoadingMembers.value = true
   apiError.value = ''
@@ -638,7 +643,7 @@ onMounted(() => {
               <p v-if="selectedMember.nativePlace" class="modal-native">{{ selectedMember.nativePlace }}</p>
               <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}</p>
             </div>
-            <div v-if="selectedMember.status === 'alumni' && selectedMember.destination" class="modal-destination-header">
+            <div v-if="isMember && selectedMember.status === 'alumni' && selectedMember.destination" class="modal-destination-header">
               <BriefcaseBusiness :size="14" />
               <span class="destination-value">{{ [parseDestinationDisplay(selectedMember.destination).city, parseDestinationDisplay(selectedMember.destination).unit].filter(Boolean).join('/') }}</span>
             </div>
@@ -648,30 +653,32 @@ onMounted(() => {
             <span v-for="tag in selectedMember.research" :key="tag">{{ tag }}</span>
           </div>
 
-          <div class="modal-divider"></div>
+          <template v-if="isMember && hasContactInfo">
+            <div class="modal-divider"></div>
 
-          <div v-if="isMember" class="modal-contact-grid">
-            <div v-if="selectedMember.phone" class="modal-contact-item">
-              <div class="contact-icon">
-                <Phone :size="15" />
+            <div class="modal-contact-grid">
+              <div v-if="selectedMember.phone" class="modal-contact-item">
+                <div class="contact-icon">
+                  <Phone :size="15" />
+                </div>
+                <div class="contact-content">
+                  <span class="contact-label">电话</span>
+                  <span class="contact-value">{{ selectedMember.phone }}</span>
+                </div>
               </div>
-              <div class="contact-content">
-                <span class="contact-label">电话</span>
-                <span class="contact-value">{{ selectedMember.phone }}</span>
+              <div v-if="selectedMember.email" class="modal-contact-item">
+                <div class="contact-icon">
+                  <Mail :size="15" />
+                </div>
+                <div class="contact-content">
+                  <span class="contact-label">邮箱</span>
+                  <span class="contact-value">{{ selectedMember.email }}</span>
+                </div>
               </div>
             </div>
-            <div v-if="selectedMember.email" class="modal-contact-item">
-              <div class="contact-icon">
-                <Mail :size="15" />
-              </div>
-              <div class="contact-content">
-                <span class="contact-label">邮箱</span>
-                <span class="contact-value">{{ selectedMember.email }}</span>
-              </div>
-            </div>
-          </div>
+          </template>
 
-          <div class="modal-bio-section">
+          <div class="modal-bio-section" :class="{ 'no-contact': !hasContactInfo || !isMember }">
             <h4 class="modal-section-title">
               <UserRound :size="16" />
               个人简介
