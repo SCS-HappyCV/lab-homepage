@@ -33,9 +33,9 @@ const previewUrl = ref(props.modelValue)
 const showCropper = ref(false)
 const cropperFile = ref<File | null>(null)
 
-const aspectRatio = computed(() => props.mode === 'cover' ? 9 / 16 : 5 / 7)
-const outputWidth = computed(() => props.mode === 'cover' ? 720 : 500)
-const outputHeight = computed(() => props.mode === 'cover' ? 1280 : 700)
+const aspectRatio = computed(() => props.mode === 'cover' ? 5 / 13 : 5 / 7)
+const outputWidth = computed(() => props.mode === 'cover' ? 500 : 500)
+const outputHeight = computed(() => props.mode === 'cover' ? 1300 : 700)
 
 watch(() => props.modelValue, (newVal) => {
   previewUrl.value = newVal ?? ''
@@ -191,7 +191,7 @@ function getInitials(name: string) {
           <Upload :size="20" />
           <span>{{ mode === 'cover' ? '点击或拖拽上传背景图' : '点击或拖拽上传照片' }}</span>
           <span class="upload-spec">
-            {{ mode === 'cover' ? '裁剪为 9:16 竖向' : '裁剪为 5:7 证件照' }} · 支持 jpg、png、webp
+            {{ mode === 'cover' ? '裁剪为 5:13 竖向' : '裁剪为 5:7 证件照' }} · 支持 jpg、png、webp
           </span>
         </div>
         <input

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
+  ArrowDown,
+  ArrowUp,
   Award,
   BriefcaseBusiness,
+  ChevronDown,
   ChevronRight,
   Lock,
   Mail,
@@ -42,14 +45,6 @@ const cohortSortAsc = ref(false)
 const nameSortAsc = ref(true)
 const selectedMember = ref<StudentProfile | null>(null)
 const bioExpanded = ref(false)
-
-const statusFilterLabels: Record<string, string> = { '全部': '全部', 'current': '在读', 'alumni': '毕业' }
-const statusFilterCycle = ['全部', 'current', 'alumni'] as const
-
-function cycleStatusFilter() {
-  const idx = statusFilterCycle.indexOf(statusFilter.value)
-  statusFilter.value = statusFilterCycle[(idx + 1) % statusFilterCycle.length]
-}
 
 function toggleCohortSort() {
   cohortSortAsc.value = !cohortSortAsc.value
@@ -513,25 +508,25 @@ onMounted(() => {
 
       <div class="member-admin-bar" aria-label="成员管理">
         <div class="admin-bar-left">
-          <span class="filter-label">状态</span>
-          <button
-            type="button"
-            class="status-toggle-btn"
-            :class="{ active: statusFilter !== '全部' }"
-            @click="cycleStatusFilter"
-          >{{ statusFilterLabels[statusFilter] }}</button>
+          <span class="filter-label">筛选</span>
+          <div class="filter-select-wrap">
+            <select v-model="statusFilter" class="filter-select">
+              <option value="全部">全部</option>
+              <option value="current">在读</option>
+              <option value="alumni">毕业</option>
+            </select>
+            <ChevronDown :size="16" class="select-chevron" />
+          </div>
           <span class="filter-label">排序</span>
           <div class="sort-group">
-            <button
-              type="button"
-              class="sort-btn active"
-              @click="toggleNameSort"
-            >按姓氏{{ nameSortAsc ? ' ↑' : ' ↓' }}</button>
-            <button
-              type="button"
-              class="sort-btn active"
-              @click="toggleCohortSort"
-            >按年级{{ cohortSortAsc ? ' ↑' : ' ↓' }}</button>
+            <button type="button" class="sort-btn" @click="toggleNameSort">
+              按姓氏
+              <component :is="nameSortAsc ? ArrowUp : ArrowDown" :size="14" />
+            </button>
+            <button type="button" class="sort-btn" @click="toggleCohortSort">
+              按年级
+              <component :is="cohortSortAsc ? ArrowUp : ArrowDown" :size="14" />
+            </button>
           </div>
         </div>
         <button v-if="isMember" class="member-create-btn" type="button" @click="openCreateEditor">
@@ -653,30 +648,28 @@ onMounted(() => {
             <span v-for="tag in selectedMember.research" :key="tag">{{ tag }}</span>
           </div>
 
-          <template v-if="isMember && hasContactInfo">
-            <div class="modal-divider"></div>
+          <div class="modal-divider" :class="{ 'no-contact': !hasContactInfo || !isMember }"></div>
 
-            <div class="modal-contact-grid">
-              <div v-if="selectedMember.phone" class="modal-contact-item">
-                <div class="contact-icon">
-                  <Phone :size="15" />
-                </div>
-                <div class="contact-content">
-                  <span class="contact-label">电话</span>
-                  <span class="contact-value">{{ selectedMember.phone }}</span>
-                </div>
+          <div v-if="isMember && hasContactInfo" class="modal-contact-grid">
+            <div v-if="selectedMember.phone" class="modal-contact-item">
+              <div class="contact-icon">
+                <Phone :size="15" />
               </div>
-              <div v-if="selectedMember.email" class="modal-contact-item">
-                <div class="contact-icon">
-                  <Mail :size="15" />
-                </div>
-                <div class="contact-content">
-                  <span class="contact-label">邮箱</span>
-                  <span class="contact-value">{{ selectedMember.email }}</span>
-                </div>
+              <div class="contact-content">
+                <span class="contact-label">电话</span>
+                <span class="contact-value">{{ selectedMember.phone }}</span>
               </div>
             </div>
-          </template>
+            <div v-if="selectedMember.email" class="modal-contact-item">
+              <div class="contact-icon">
+                <Mail :size="15" />
+              </div>
+              <div class="contact-content">
+                <span class="contact-label">邮箱</span>
+                <span class="contact-value">{{ selectedMember.email }}</span>
+              </div>
+            </div>
+          </div>
 
           <div class="modal-bio-section" :class="{ 'no-contact': !hasContactInfo || !isMember }">
             <h4 class="modal-section-title">
