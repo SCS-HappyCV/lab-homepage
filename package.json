@@ -8,7 +8,6 @@
     "build": "vite build",
     "preview": "vite preview",
     "thumbs": "node scripts/generate-gallery-thumbnails.mjs",
-    "optimize:students": "node scripts/optimize-student-photos.mjs",
     "test": "tsx --test test/**/*.test.ts"
   },
   "dependencies": {

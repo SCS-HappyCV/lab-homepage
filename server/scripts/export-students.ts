@@ -21,6 +21,7 @@ interface StudentRow {
   wechat: string | null
   nativePlace: string | null
   photo: string | null
+  coverPhoto: string | null
   destination: string | null
   bio: string
   achievements: string
@@ -67,6 +68,7 @@ function main() {
       wechat: row.wechat ?? undefined,
       nativePlace: row.nativePlace ?? undefined,
       photo: row.photo ?? undefined,
+      coverPhoto: row.coverPhoto ?? undefined,
       destination: row.destination ?? undefined,
       bio: row.bio,
       research: safeParseJsonArray(row.research),

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
+import fs from 'node:fs/promises'
 import path from 'node:path'
 import { requireAdmin, type AuthService } from './auth.js'
 import { StudentValidationError, type StudentRepository } from './students.repo.js'
@@ -111,8 +112,11 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
         return
       }
 
+      // 记录旧照片路径，用于后续清理
+      const oldPhotoUrl = student.photo
+
       // 生成最终文件路径
-      const relativePath = generatePhotoPath(student.cohort, id, req.file.originalname, 'avatar')
+      const relativePath = generatePhotoPath(student.cohort, id, 'avatar')
       const finalDir = path.join(uploadDir, student.cohort)
       const finalPath = path.join(uploadDir, relativePath)
 
@@ -129,6 +133,11 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
       // 更新学生的 photo 字段
       const photoUrl = `/uploads/students/${relativePath.replace(/\\/g, '/')}`
       const updated = repo.update(id, { ...student, photo: photoUrl })
+
+      // 上传成功后，删除旧照片文件（如果路径与新照片不同）
+      if (updated && oldPhotoUrl && oldPhotoUrl !== photoUrl) {
+        await deleteUploadedPhoto(oldPhotoUrl, uploadDir)
+      }
 
       if (!updated) {
         res.status(500).json({ error: '更新学生照片失败' })
@@ -174,7 +183,9 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
         return
       }
 
-      const relativePath = generatePhotoPath(student.cohort, id, req.file.originalname, 'cover')
+      const oldCoverUrl = student.coverPhoto
+
+      const relativePath = generatePhotoPath(student.cohort, id, 'cover')
       const finalDir = path.join(uploadDir, student.cohort)
       const finalPath = path.join(uploadDir, relativePath)
 
@@ -186,6 +197,10 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
 
       const photoUrl = `/uploads/students/${relativePath.replace(/\\/g, '/')}`
       const updated = repo.update(id, { ...student, coverPhoto: photoUrl })
+
+      if (updated && oldCoverUrl && oldCoverUrl !== photoUrl) {
+        await deleteUploadedPhoto(oldCoverUrl, uploadDir)
+      }
 
       if (!updated) {
         res.status(500).json({ error: '更新背景图失败' })
@@ -215,6 +230,27 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
   })
 
   return router
+}
+
+function resolveUploadedPhotoPath(photoUrl: string, uploadDir: string): string | null {
+  const prefix = '/uploads/students/'
+  if (!photoUrl.startsWith(prefix)) return null
+
+  const relativePath = photoUrl.slice(prefix.length)
+  return path.join(uploadDir, relativePath)
+}
+
+async function deleteUploadedPhoto(photoUrl: string, uploadDir: string): Promise<void> {
+  const diskPath = resolveUploadedPhotoPath(photoUrl, uploadDir)
+  if (!diskPath) return
+
+  try {
+    await fs.unlink(diskPath)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      console.error('Failed to delete old photo:', error)
+    }
+  }
 }
 
 function withDefaults(input: Partial<StudentRecord>, forcedId?: string): StudentRecord {

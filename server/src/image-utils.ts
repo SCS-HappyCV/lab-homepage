@@ -80,9 +80,7 @@ export async function ensureDirectory(dirPath: string): Promise<void> {
   await fs.mkdir(dirPath, { recursive: true })
 }
 
-export function generatePhotoPath(cohort: string, studentId: string, originalName: string, prefix = 'photo'): string {
-  const ext = path.extname(originalName).toLowerCase() || '.jpg'
-  const timestamp = Date.now()
-  const filename = `${studentId}-${prefix}-${timestamp}${ext}`
+export function generatePhotoPath(cohort: string, studentId: string, prefix = 'photo'): string {
+  const filename = `${studentId}-${prefix}.jpg`
   return path.join(cohort, filename)
 }

@@ -3,19 +3,19 @@
     "id": "2025-a",
     "name": "袁彤",
     "cohort": "2025",
-    "degree": "硕士研究生",
-    "role": "在读学生",
+    "degree": "硕士",
     "status": "current",
-    "research": [
-      "高光谱分类"
-    ],
     "email": "202521633254@smail.xtu.edu.cn",
     "phone": "",
     "wechat": "Jack_Alice_",
     "nativePlace": "湖南邵阳",
-    "photo": "./students/2025/yuan-tong.jpg",
+    "photo": "/uploads/students/2025/yuan-tong.jpg",
+    "coverPhoto": "",
     "destination": "",
     "bio": "研究方向为高光谱图像分类。担任实验室2026-2027生活委员。湘大秀才。",
+    "research": [
+      "高光谱分类"
+    ],
     "achievements": [
       "湘潭大学十佳歌手",
       "湘大杯篮球比赛亚军",
@@ -29,27 +29,26 @@
       "2025 湘潭大学计算机科学与技术专业攻读硕士学位"
     ],
     "sortOrder": 0,
-    "createdAt": "2026-07-09T05:57:07.623Z",
-    "updatedAt": "2026-07-09T05:57:07.623Z"
+    "createdAt": "2026-07-09T09:07:17.872Z",
+    "updatedAt": "2026-07-17T11:49:06.209Z"
   },
   {
     "id": "2025-b",
-    "name": "2025届成员 B",
+    "name": "阳涛",
     "cohort": "2025",
-    "degree": "硕士研究生",
-    "role": "在读学生",
+    "degree": "硕士",
     "status": "current",
+    "email": "student2025b@example.com",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "湖南衡阳",
+    "photo": "",
+    "destination": "",
+    "bio": "关注三维场景理解与点云语义分析，参与水利与复杂室外场景相关研究。",
     "research": [
       "三维感知",
       "点云理解"
     ],
-    "email": "student2025b@example.com",
-    "phone": "",
-    "wechat": "",
-    "nativePlace": "",
-    "photo": "",
-    "destination": "",
-    "bio": "关注三维场景理解与点云语义分析，参与水利与复杂室外场景相关研究。",
     "achievements": [
       "参与三维语义分割实验",
       "完成点云数据处理流程建设"
@@ -59,27 +58,26 @@
       "2024 参与实验室场景数据采集与标注"
     ],
     "sortOrder": 0,
-    "createdAt": "2026-07-09T08:19:44.648Z",
-    "updatedAt": "2026-07-09T08:19:44.648Z"
+    "createdAt": "2026-07-09T09:06:58.869Z",
+    "updatedAt": "2026-07-09T09:06:58.870Z"
   },
   {
     "id": "2024-a",
-    "name": "2024届成员 A",
+    "name": "赵思亮",
     "cohort": "2024",
     "degree": "硕士",
-    "role": "毕业生",
-    "status": "alumni",
-    "research": [
-      "图像增强",
-      "视觉检测"
-    ],
+    "status": "current",
     "email": "alumni2024a@example.com",
     "phone": "",
     "wechat": "",
-    "nativePlace": "",
+    "nativePlace": "湖南常德",
     "photo": "",
-    "destination": "某科技企业算法工程师",
+    "coverPhoto": "",
+    "destination": "",
     "bio": "在校期间主要参与视觉检测和图像增强相关项目，毕业后从事算法工程工作。",
+    "research": [
+      "高光谱图像分类"
+    ],
     "achievements": [
       "参与视觉检测方向研究",
       "参与企业合作项目实践"
@@ -89,26 +87,26 @@
       "2023 参与视觉检测系统开发"
     ],
     "sortOrder": 0,
-    "createdAt": "2026-07-09T07:14:06.728Z",
-    "updatedAt": "2026-07-09T07:14:06.728Z"
+    "createdAt": "2026-07-14T06:53:43.797Z",
+    "updatedAt": "2026-07-14T06:53:43.797Z"
   },
   {
     "id": "2023-a",
     "name": "伍志明",
     "cohort": "2023",
     "degree": "硕士",
-    "role": "毕业生",
     "status": "alumni",
-    "research": [
-      "变化检测"
-    ],
     "email": "zhimingwu2022@126.com",
     "phone": "13160595803",
     "wechat": "w384z756m",
-    "nativePlace": "湖南耒阳",
-    "photo": "./students/2023/wu-zhiming.jpg",
-    "destination": "长沙万兴科技有限公司",
+    "nativePlace": "湖南衡阳",
+    "photo": "/uploads/students/2023/wu-zhiming.jpg",
+    "coverPhoto": "",
+    "destination": "湖南长沙万兴科技有限公司",
     "bio": "在校期间关注水利遥感图像变化检测，建设了数据集 RLB-CD。担任实验室2024-2025生活委员。",
+    "research": [
+      "变化检测"
+    ],
     "achievements": [
       "Mamba-LiteDSN: Lightweight Dual-Stream Network for Efficient Remote Sensing Change Detection. IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing. 中科院二区. JCR Q1.在投",
       "第七届“华为杯”中国研究生人工智能创新大赛全国二等奖",
@@ -121,57 +119,27 @@
       "2026 入职长沙万兴科技有限公司研发岗位"
     ],
     "sortOrder": 0,
-    "createdAt": "2026-07-09T07:13:29.788Z",
-    "updatedAt": "2026-07-09T07:13:29.788Z"
+    "createdAt": "2026-07-16T06:07:59.815Z",
+    "updatedAt": "2026-07-17T11:49:05.839Z"
   },
   {
     "id": "2024-b",
-    "name": "2024届成员 B",
+    "name": "张竣",
     "cohort": "2024",
     "degree": "硕士",
-    "role": "毕业生",
-    "status": "alumni",
-    "research": [
-      "语义分割",
-      "遥感视觉"
-    ],
+    "status": "current",
     "email": "alumni2024b@example.com",
     "phone": "",
     "wechat": "",
-    "nativePlace": "",
+    "nativePlace": "湖南怀化",
     "photo": "",
-    "destination": "继续攻读博士学位",
+    "coverPhoto": "",
+    "destination": "",
     "bio": "毕业课题聚焦复杂场景语义分割，毕业后继续开展视觉智能相关研究。",
-    "achievements": [
-      "参与语义分割数据集建设",
-      "完成毕业论文与实验复现材料"
-    ],
-    "experiences": [
-      "2021-2024 实验室硕士阶段学习",
-      "2024 进入博士阶段继续深造"
-    ],
-    "sortOrder": 1,
-    "createdAt": "2026-07-09T05:57:07.641Z",
-    "updatedAt": "2026-07-09T05:57:07.641Z"
-  },
-  {
-    "id": "2024-c",
-    "name": "2024届成员 C",
-    "cohort": "2024",
-    "degree": "硕士",
-    "role": "毕业生",
-    "status": "alumni",
     "research": [
       "语义分割",
       "遥感视觉"
     ],
-    "email": "alumni2024c@example.com",
-    "phone": "",
-    "wechat": "",
-    "nativePlace": "",
-    "photo": "",
-    "destination": "继续攻读博士学位",
-    "bio": "毕业课题聚焦复杂场景语义分割，毕业后继续开展视觉智能相关研究。",
     "achievements": [
       "参与语义分割数据集建设",
       "完成毕业论文与实验复现材料"
@@ -180,8 +148,345 @@
       "2021-2024 实验室硕士阶段学习",
       "2024 进入博士阶段继续深造"
     ],
-    "sortOrder": 2,
-    "createdAt": "2026-07-09T05:57:07.645Z",
-    "updatedAt": "2026-07-09T05:57:07.645Z"
+    "sortOrder": 0,
+    "createdAt": "2026-07-14T06:53:36.265Z",
+    "updatedAt": "2026-07-14T06:53:36.265Z"
+  },
+  {
+    "id": "2024-c",
+    "name": "颜宠",
+    "cohort": "2024",
+    "degree": "硕士",
+    "status": "current",
+    "email": "alumni2024c@example.com",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "湖南娄底",
+    "photo": "",
+    "coverPhoto": "",
+    "destination": "",
+    "bio": "毕业课题聚焦复杂场景语义分割，毕业后继续开展视觉智能相关研究。",
+    "research": [
+      "语义分割",
+      "遥感视觉"
+    ],
+    "achievements": [
+      "参与语义分割数据集建设",
+      "完成毕业论文与实验复现材料"
+    ],
+    "experiences": [
+      "2021-2024 实验室硕士阶段学习",
+      "2024 进入博士阶段继续深造"
+    ],
+    "sortOrder": 0,
+    "createdAt": "2026-07-14T06:53:24.465Z",
+    "updatedAt": "2026-07-14T06:53:24.465Z"
+  },
+  {
+    "id": "2026-1783588363801",
+    "name": "胡帝",
+    "cohort": "2026",
+    "degree": "硕士",
+    "status": "current",
+    "email": "",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "湖南邵阳",
+    "photo": "",
+    "coverPhoto": "",
+    "destination": "",
+    "bio": "2026级新生，喜欢学习与运动！",
+    "research": [
+      "高光谱分类"
+    ],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-17T05:00:57.521Z",
+    "updatedAt": "2026-07-17T05:00:57.522Z"
+  },
+  {
+    "id": "2026-1783588445738",
+    "name": "徐晓明",
+    "cohort": "2026",
+    "degree": "硕士",
+    "status": "current",
+    "email": "634257989@qq.com",
+    "phone": "13160595803",
+    "wechat": "",
+    "nativePlace": "广东广州",
+    "photo": "/uploads/students/2026/2026-1783588445738-avatar-1784078489259.jpg",
+    "coverPhoto": "/uploads/students/2026/2026-1783588445738-cover-1784172014370.jpg",
+    "destination": "",
+    "bio": "2026年级新生，加油加油加油！",
+    "research": [
+      "语义分割",
+      "三维点云"
+    ],
+    "achievements": [
+      "成功卸载360安全卫士",
+      "成功安装大陆最通用的两款通讯工具（微信、QQ）"
+    ],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-16T03:20:16.566Z",
+    "updatedAt": "2026-07-16T03:20:16.567Z"
+  },
+  {
+    "id": "2024-1783592162929",
+    "name": "俞沛承",
+    "cohort": "2024",
+    "degree": "硕士",
+    "status": "current",
+    "email": "1156007569@qq.com",
+    "phone": "15206161271",
+    "wechat": "",
+    "nativePlace": "江苏无锡",
+    "photo": "",
+    "coverPhoto": "",
+    "destination": "",
+    "bio": "叫我无上魔龙大帝！我会告诉你：答案说明所有",
+    "research": [
+      "语义分割",
+      "三维点云",
+      "多模态融合"
+    ],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-15T07:06:28.531Z",
+    "updatedAt": "2026-07-15T07:06:28.532Z"
+  },
+  {
+    "id": "2024-1783592188641",
+    "name": "张可欣",
+    "cohort": "2024",
+    "degree": "硕士",
+    "status": "current",
+    "email": "",
+    "phone": "17373217543",
+    "wechat": "",
+    "nativePlace": "湖南永州",
+    "photo": "",
+    "destination": "",
+    "bio": "",
+    "research": [],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-10T01:52:35.299Z",
+    "updatedAt": "2026-07-10T01:52:35.299Z"
+  },
+  {
+    "id": "2023-1783604328577",
+    "name": "戴浩华",
+    "cohort": "2023",
+    "degree": "硕士",
+    "status": "alumni",
+    "email": "",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "coverPhoto": "",
+    "destination": "江苏常州星宇科技",
+    "bio": "",
+    "research": [],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-14T11:30:19.928Z",
+    "updatedAt": "2026-07-14T11:30:19.928Z"
+  },
+  {
+    "id": "2023-1783648572784",
+    "name": "刘奇鹏",
+    "cohort": "2023",
+    "degree": "硕士",
+    "status": "alumni",
+    "email": "",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "coverPhoto": "",
+    "destination": "继续攻读博士",
+    "bio": "",
+    "research": [],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-14T11:30:43.671Z",
+    "updatedAt": "2026-07-14T11:30:43.671Z"
+  },
+  {
+    "id": "2025-1783648635748",
+    "name": "朱磊",
+    "cohort": "2025",
+    "degree": "硕士",
+    "status": "current",
+    "email": "22@dd.c",
+    "phone": "131",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "coverPhoto": "",
+    "destination": "",
+    "bio": "2",
+    "research": [
+      "2"
+    ],
+    "achievements": [
+      "2"
+    ],
+    "experiences": [
+      "2"
+    ],
+    "sortOrder": 0,
+    "createdAt": "2026-07-17T04:51:03.142Z",
+    "updatedAt": "2026-07-17T04:51:03.142Z"
+  },
+  {
+    "id": "2025-1783648650565",
+    "name": "陈文杰",
+    "cohort": "2025",
+    "degree": "硕士",
+    "status": "current",
+    "email": "",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "coverPhoto": "",
+    "destination": "",
+    "bio": "天才对抗路，国服对抗路种子选手",
+    "research": [
+      "对抗路"
+    ],
+    "achievements": [
+      "50级资深收藏家·全面史诗",
+      "王者印记：26 荣耀印记12",
+      "皮肤数量：250",
+      "省级第93花木兰",
+      "市级第49曹操",
+      "市级第67亚连",
+      "市级第12杨戬",
+      "市级第93夏洛特",
+      "市级第55马超",
+      "区级第31哪吒",
+      "区级第55杨玉环",
+      "区级第63吕布",
+      "区级第14蚩姹",
+      "区级第64狂铁"
+    ],
+    "experiences": [
+      "对战场次：15282",
+      "对战被赞12188",
+      "阿离头号粉丝",
+      "看我玉树临风"
+    ],
+    "sortOrder": 0,
+    "createdAt": "2026-07-17T03:24:52.459Z",
+    "updatedAt": "2026-07-17T03:24:52.459Z"
+  },
+  {
+    "id": "2022-1783758653015",
+    "name": "胡开宇",
+    "cohort": "2022",
+    "degree": "硕士",
+    "status": "alumni",
+    "email": "1124982208@qq.com",
+    "phone": "18274738143",
+    "wechat": "",
+    "nativePlace": "湖南衡阳",
+    "photo": "",
+    "destination": "天津特变电工",
+    "bio": "",
+    "research": [],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-11T08:30:55.026Z",
+    "updatedAt": "2026-07-11T08:30:55.026Z"
+  },
+  {
+    "id": "2022-1783758703101",
+    "name": "许宇婷",
+    "cohort": "2022",
+    "degree": "硕士",
+    "status": "alumni",
+    "email": "",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "安徽合肥",
+    "photo": "",
+    "destination": "",
+    "bio": "",
+    "research": [],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-11T08:31:44.686Z",
+    "updatedAt": "2026-07-11T08:31:44.686Z"
+  },
+  {
+    "id": "2022-1783758720172",
+    "name": "周敏",
+    "cohort": "2022",
+    "degree": "硕士",
+    "status": "alumni",
+    "email": "",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "destination": "",
+    "bio": "",
+    "research": [],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-11T11:29:55.769Z",
+    "updatedAt": "2026-07-11T11:29:55.770Z"
+  },
+  {
+    "id": "2022-1783758749496",
+    "name": "盘运红",
+    "cohort": "2022",
+    "degree": "硕士",
+    "status": "alumni",
+    "email": "",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "destination": "",
+    "bio": "",
+    "research": [],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-11T08:32:30.219Z",
+    "updatedAt": "2026-07-11T08:32:30.219Z"
+  },
+  {
+    "id": "2022-1783758770992",
+    "name": "聂旺",
+    "cohort": "2022",
+    "degree": "硕士",
+    "status": "alumni",
+    "email": "",
+    "phone": "",
+    "wechat": "",
+    "nativePlace": "",
+    "photo": "",
+    "destination": "",
+    "bio": "",
+    "research": [],
+    "achievements": [],
+    "experiences": [],
+    "sortOrder": 0,
+    "createdAt": "2026-07-11T08:32:51.629Z",
+    "updatedAt": "2026-07-11T08:32:51.629Z"
   }
 ]

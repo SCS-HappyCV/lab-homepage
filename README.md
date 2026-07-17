@@ -77,8 +77,7 @@ lab-homepage/
 │   ├── scripts/                  # 数据库脚本
 │   └── test/                     # 后端测试
 ├── public/                       # 静态资源
-│   ├── gallery/lab/              # 照片墙图片 + 缩略图
-│   └── students/                 # 成员照片 (按届别存放)
+│   └── gallery/lab/              # 照片墙图片 + 缩略图
 ├── scripts/                      # 前端工具脚本
 ├── docs/                         # 构建输出 (GitHub Pages)
 └── .github/workflows/            # CI/CD
@@ -88,73 +87,34 @@ lab-homepage/
 
 ## 成员数据维护
 
-成员页 (`/#/people`) 优先从后端 API 读取数据，后端不可用时回退到前端静态数据。
+成员页 (`/#/people`) 所有数据均来自后端 API，SQLite 是唯一数据源。登录后可在页面上直接新增、编辑、删除成员。
 
-### 前端静态数据
+### 新增/编辑成员
 
-数据按届别拆分在 `src/data/students/years/` 下：
+1. 访问 `/#/people`
+2. 点击右上角「新增成员」或在成员卡片上点击「编辑」
+3. 填写表单并保存
 
-```
-src/data/students/
-  index.ts          # 自动汇总，不需要日常修改
-  types.ts          # 类型定义
-  helpers.ts        # 照片路径工具
-  years/
-    2025.ts
-    2024.ts
-    2023.ts
-```
-
-**新增成员**：编辑对应年份文件，在数组中添加一项：
-
-```ts
-{
-  id: '2025-zhang-san',
-  name: '张三',
-  cohort: '2025',
-  degree: '硕士研究生',
-  status: 'current',
-  nativePlace: '湖南长沙',
-  wechat: 'happycv_lab',
-  photo: studentPhoto('2025', 'zhang-san.jpg'),
-  coverPhoto: studentPhoto('2025', 'zhang-san-cover.jpg'),  // 可选，个人页封面
-  research: ['计算机视觉', '多模态学习'],
-  email: 'zhangsan@example.com',
-  phone: '13800000000',
-  bio: '个人简介。',
-  achievements: ['代表性成果 1'],
-  experiences: ['2021-2025 本科', '2025-至今 硕士'],
-}
-```
-
-**毕业生**：将 `status` 改为 `'alumni'`，增加 `destination` 字段。
-
-**新增年份**：创建 `src/data/students/years/2026.ts`，`index.ts` 会自动读取，无需手动注册。
+**毕业生**：将「状态」改为「已毕业」，并填写毕业去向。
 
 ### 成员照片
 
-照片放在 `public/students/` 下，按届别分目录：
+成员头像和背景图通过管理后台上传，存储在服务器 `UPLOAD_DIR`（生产环境为 `/var/www/uploads/students`）下，按届别分目录。上传时会自动压缩（最长边 1200px、质量 82、阈值 800KB）。
 
-```
-public/students/2025/zhang-san.jpg
-public/students/2024/wang-lei.jpg
-```
+同一位成员重复上传头像或背景图时，新文件会**覆盖**旧文件，旧文件会从服务器删除，不会留下历史副本。
 
-数据中使用 `studentPhoto('2025', 'zhang-san.jpg')` 生成路径。未填照片时自动显示姓名缩写头像。
+未上传照片时，系统会自动显示姓名缩写头像。
 
-### 照片压缩
+### 从静态照片迁移
 
-成员照片不展示原图，可直接压缩。新增或替换后运行：
+如果历史上存在 `public/students/` 下的静态照片，需要一次性迁移到服务器上传目录并更新数据库：
 
 ```bash
-npm run optimize:students
+cd server
+npx tsx scripts/migrate-static-photos.ts
 ```
 
-默认规则：大于 800KB 的照片，最长边压到 1200px，质量 82。可自定义参数：
-
-```bash
-npm run optimize:students -- --threshold-kb=600 --max=1000 --quality=80
-```
+迁移完成后即可删除 `public/students/` 目录。
 
 ---
 
@@ -245,20 +205,22 @@ VITE_API_BASE_URL=https://api.scs-happycv.top # 生产 (.env.production)
 
 ### 初始化数据库
 
+如果有备份的 `server/data/export-students.json`，可导入到 SQLite：
+
 ```bash
 cd server
-npm run db:import
+npm run db:import-json
 ```
 
-导入后 SQLite 即为数据源。此命令会覆盖已有数据，不要作为常规同步使用。
+导入后 SQLite 即为数据源。
 
 ### 数据库脚本
 
 | 命令 | 说明 |
 |---|---|
-| `npm run db:import` | 从静态数据导入成员到 SQLite |
-| `npm run db:export` | 从 SQLite 导出成员数据 |
+| `npm run db:export` | 从 SQLite 导出成员数据到 JSON |
 | `npm run db:import-json` | 从 JSON 文件导入 |
+| `npm run db:migrate-static-photos` | 迁移 `public/students/` 静态照片到上传目录 |
 
 ---
 
@@ -277,7 +239,7 @@ cd server
 npm install
 # 创建 .env 文件，参考上方"环境配置"章节
 npm run build
-npm run db:import
+# 如需从 JSON 备份导入数据：npm run db:import-json
 pm2 start ecosystem.config.cjs
 pm2 save
 ```
@@ -314,12 +276,11 @@ cd server && npm test
 | `npm run dev` | 启动前端开发服务器 |
 | `npm run build` | 构建前端到 `docs/` |
 | `npm run thumbs` | 生成照片墙缩略图 |
-| `npm run optimize:students` | 压缩成员照片 |
 | `npm test` | 运行前端测试 |
 | `cd server && npm run dev` | 启动后端开发服务器 |
 | `cd server && npm run build` | 编译后端 TypeScript |
 | `cd server && npm test` | 运行后端测试 |
-| `cd server && npm run db:import` | 导入成员数据到 SQLite |
+| `cd server && npm run db:export` | 导出成员数据到 JSON |
 
 ---
 

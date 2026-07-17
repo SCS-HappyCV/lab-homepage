@@ -35,8 +35,7 @@ export function createApp(options: Partial<AppOptions> = {}) {
   // 静态文件服务 - 照片访问
   const uploadsBaseDir = path.dirname(config.uploadDir)
   app.use('/uploads', express.static(uploadsBaseDir, {
-    maxAge: '30d',
-    immutable: true,
+    maxAge: '5m',
     setHeaders: (res) => {
       res.set('Access-Control-Allow-Origin', '*')
     },
