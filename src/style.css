@@ -1515,7 +1515,7 @@ h3 {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: scale(1.12) translate(-50%, -50%);
   z-index: 50;
   width: min(760px, 92vw);
   height: min(520px, 88vh);
@@ -1529,11 +1529,11 @@ h3 {
 @keyframes modal-enter {
   from {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.92);
+    transform: scale(1.12) translate(-50%, -50%) scale(0.82);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1.12) translate(-50%, -50%);
   }
 }
 
