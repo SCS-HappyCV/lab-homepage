@@ -19,7 +19,7 @@ import {
   UserRound,
   X,
 } from 'lucide-vue-next'
-import { studentProfiles, type StudentProfile, type StudentStatus } from '../data/students/index'
+import type { StudentProfile, StudentStatus } from '../data/students/types'
 import { memberApi } from '../utils/api'
 import { useAuth } from '../utils/useAuth'
 import { publicAsset, resolvePhotoUrl } from '../utils/publicAsset'
@@ -35,7 +35,7 @@ type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experience
 
 const allCohorts = '全部'
 
-const members = ref<StudentProfile[]>(studentProfiles)
+const members = ref<StudentProfile[]>([])
 const apiError = ref('')
 const isLoadingMembers = ref(false)
 const activeCohorts = ref<string[]>([allCohorts])
@@ -306,8 +306,8 @@ async function loadMembers() {
   try {
     members.value = await memberApi.listStudents()
   } catch {
-    members.value = studentProfiles
-    apiError.value = '成员数据服务暂时不可用，当前显示内置备份数据。'
+    members.value = []
+    apiError.value = '成员数据服务暂时不可用，请稍后刷新重试。'
   } finally {
     isLoadingMembers.value = false
   }
@@ -651,7 +651,7 @@ onMounted(() => {
           <div class="modal-divider" :class="{ 'no-contact': !hasContactInfo || !isMember }"></div>
 
           <div v-if="isMember && hasContactInfo" class="modal-contact-grid">
-            <div v-if="selectedMember.phone" class="modal-contact-item">
+            <div v-if="selectedMember.phone" class="modal-contact-item contact-phone">
               <div class="contact-icon">
                 <Phone :size="15" />
               </div>
@@ -660,7 +660,7 @@ onMounted(() => {
                 <span class="contact-value">{{ selectedMember.phone }}</span>
               </div>
             </div>
-            <div v-if="selectedMember.email" class="modal-contact-item">
+            <div v-if="selectedMember.email" class="modal-contact-item contact-email">
               <div class="contact-icon">
                 <Mail :size="15" />
               </div>

@@ -1728,10 +1728,10 @@ h3 {
   gap: 20px;
 }
 
-/* --- 联系方式（两列布局） --- */
+/* --- 联系方式（自适应布局） --- */
 .modal-contact-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 8px;
 }
@@ -1740,6 +1740,16 @@ h3 {
   display: flex;
   align-items: flex-start;
   gap: 10px;
+}
+
+.contact-phone {
+  flex: 1 1 120px;
+  max-width: 35%;
+}
+
+.contact-email {
+  flex: 2 1 200px;
+  max-width: 65%;
 }
 
 .contact-icon {
