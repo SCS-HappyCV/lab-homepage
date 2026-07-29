@@ -618,7 +618,7 @@ onMounted(() => {
         <div>
           <p class="section-kicker">Directory</p>
           <h2>团队成员档案</h2>
-          <p v-if="isLoadingMembers" class="api-state">正在同步成员数据...</p>
+          <p v-if="isLoadingMembers" class="api-state">加载中... / Loading...</p>
           <p v-else-if="apiError" class="api-state warning">{{ apiError }}</p>
         </div>
         <div class="member-admin-actions">
@@ -771,8 +771,14 @@ onMounted(() => {
 
           <div v-if="groupedMembers.length === 0" class="empty-state">
             <UserRound :size="36" />
-            <h3>没有匹配的成员</h3>
-            <p>可以清空搜索词，或调整届别筛选。</p>
+            <template v-if="isLoadingMembers">
+              <h3>加载中... / Loading...</h3>
+              <p>正在获取团队成员数据</p>
+            </template>
+            <template v-else>
+              <h3>没有匹配的成员</h3>
+              <p>可以清空搜索词，或调整届别筛选。</p>
+            </template>
           </div>
         </div>
       </div>
