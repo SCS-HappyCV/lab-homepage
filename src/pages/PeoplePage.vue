@@ -56,7 +56,7 @@ const statusFilter = ref<'全部' | 'current' | 'alumni'>('全部')
 const cohortSortAsc = ref(false)
 const nameSortAsc = ref(true)
 const selectedMember = ref<StudentProfile | null>(null)
-const bioExpanded = ref(false)
+const activeTab = ref<'bio' | 'achievements' | 'experiences'>('bio')
 
 function toggleCohortSort() {
   cohortSortAsc.value = !cohortSortAsc.value
@@ -387,11 +387,12 @@ function initials(name: string) {
 
 function selectMember(member: StudentProfile) {
   selectedMember.value = member
+  activeTab.value = 'bio'
 }
 
 function clearSelectedMember() {
   selectedMember.value = null
-  bioExpanded.value = false
+  activeTab.value = 'bio'
 }
 
 function selectPrevMember() {
@@ -399,7 +400,7 @@ function selectPrevMember() {
   const index = orderedMembers.value.findIndex((member) => member.id === selectedMember.value!.id)
   const prevIndex = index <= 0 ? orderedMembers.value.length - 1 : index - 1
   selectedMember.value = orderedMembers.value[prevIndex]
-  bioExpanded.value = false
+  activeTab.value = 'bio'
 }
 
 function selectNextMember() {
@@ -407,7 +408,7 @@ function selectNextMember() {
   const index = orderedMembers.value.findIndex((member) => member.id === selectedMember.value!.id)
   const nextIndex = index === -1 || index >= orderedMembers.value.length - 1 ? 0 : index + 1
   selectedMember.value = orderedMembers.value[nextIndex]
-  bioExpanded.value = false
+  activeTab.value = 'bio'
 }
 
 const hasContactInfo = computed(() => {
@@ -817,8 +818,14 @@ onMounted(() => {
                       </p>
                     </div>
                     <div v-if="isMember && selectedMember.status === 'alumni' && selectedMember.destination" class="modal-destination-header">
-                      <BriefcaseBusiness :size="14" />
-                      <span class="destination-value">{{ [parseDestinationDisplay(selectedMember.destination).city, parseDestinationDisplay(selectedMember.destination).unit].filter(Boolean).join('/') }}</span>
+                      <div class="destination-line">
+                        <BriefcaseBusiness :size="16" />
+                        <span class="destination-unit">{{ parseDestinationDisplay(selectedMember.destination).unit }}</span>
+                      </div>
+                      <div class="destination-line">
+                        <MapPin :size="16" />
+                        <span class="destination-city">{{ parseDestinationDisplay(selectedMember.destination).city }}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -826,12 +833,10 @@ onMounted(() => {
                     <span v-for="tag in selectedMember.research" :key="tag">{{ tag }}</span>
                   </div>
 
-                  <div class="modal-divider" :class="{ 'no-contact': !hasContactInfo || !isMember }"></div>
-
                   <div v-if="isMember && hasContactInfo" class="modal-contact-grid">
                     <div v-if="selectedMember.phone" class="modal-contact-item contact-phone">
                       <div class="contact-icon">
-                        <Phone :size="15" />
+                        <Phone :size="18" />
                       </div>
                       <div class="contact-content">
                         <span class="contact-label">电话</span>
@@ -840,7 +845,7 @@ onMounted(() => {
                     </div>
                     <div v-if="selectedMember.email" class="modal-contact-item contact-email">
                       <div class="contact-icon">
-                        <Mail :size="15" />
+                        <Mail :size="18" />
                       </div>
                       <div class="contact-content">
                         <span class="contact-label">邮箱</span>
@@ -849,37 +854,38 @@ onMounted(() => {
                     </div>
                   </div>
 
-                  <div class="modal-bio-section" :class="{ 'no-contact': !hasContactInfo || !isMember }">
-                    <h4 class="modal-section-title">
-                      <UserRound :size="16" />
+                  <div class="modal-tabs" :class="{ 'no-contact': !hasContactInfo || !isMember }">
+                    <button type="button" class="modal-tab" :class="{ active: activeTab === 'bio' }" @click="activeTab = 'bio'">
+                      <UserRound :size="15" />
                       个人简介
-                    </h4>
-                    <div class="modal-bio" :class="{ expanded: bioExpanded }">
-                      <p>{{ selectedMember.bio }}</p>
-                      <button v-if="selectedMember.bio && selectedMember.bio.length > 100" type="button" class="bio-toggle" @click="bioExpanded = !bioExpanded">
-                        {{ bioExpanded ? '收起' : '展开全部' }}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div v-if="selectedMember.achievements.length > 0" class="modal-section">
-                    <h4 class="modal-section-title">
-                      <Award :size="16" />
+                    </button>
+                    <button type="button" class="modal-tab" :class="{ active: activeTab === 'achievements' }" @click="activeTab = 'achievements'">
+                      <Award :size="15" />
                       代表成果
-                    </h4>
-                    <ul class="modal-list">
-                      <li v-for="(item, index) in selectedMember.achievements" :key="index">{{ item }}</li>
-                    </ul>
+                    </button>
+                    <button type="button" class="modal-tab" :class="{ active: activeTab === 'experiences' }" @click="activeTab = 'experiences'">
+                      <BriefcaseBusiness :size="15" />
+                      个人经历
+                    </button>
                   </div>
 
-                  <div v-if="selectedMember.experiences.length > 0" class="modal-section">
-                    <h4 class="modal-section-title">
-                      <BriefcaseBusiness :size="16" />
-                      个人经历
-                    </h4>
-                    <ul class="modal-list">
-                      <li v-for="(item, index) in selectedMember.experiences" :key="index">{{ item }}</li>
-                    </ul>
+                  <div class="modal-tab-content">
+                    <div v-if="activeTab === 'bio'" class="modal-tab-panel">
+                      <p v-if="selectedMember.bio" class="modal-bio-text">{{ selectedMember.bio }}</p>
+                      <p v-else class="modal-empty-text">暂无个人简介</p>
+                    </div>
+                    <div v-else-if="activeTab === 'achievements'" class="modal-tab-panel">
+                      <ul v-if="selectedMember.achievements.length > 0" class="modal-list">
+                        <li v-for="(item, index) in selectedMember.achievements" :key="index">{{ item }}</li>
+                      </ul>
+                      <p v-else class="modal-empty-text">暂无代表成果</p>
+                    </div>
+                    <div v-else-if="activeTab === 'experiences'" class="modal-tab-panel">
+                      <ul v-if="selectedMember.experiences.length > 0" class="modal-list">
+                        <li v-for="(item, index) in selectedMember.experiences" :key="index">{{ item }}</li>
+                      </ul>
+                      <p v-else class="modal-empty-text">暂无个人经历</p>
+                    </div>
                   </div>
                 </div>
 

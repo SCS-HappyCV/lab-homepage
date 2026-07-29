@@ -1106,10 +1106,10 @@ h3 {
 .status-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 24px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -1628,12 +1628,12 @@ h3 {
 
 .member-modal {
   position: relative;
-  width: min(840px, 92vw, 135vh);
+  width: min(1008px, 92vw, 135vh);
   aspect-ratio: 3 / 2;
   height: auto;
   overflow: hidden;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
   animation: modal-enter 0.25s ease;
   pointer-events: auto;
@@ -1652,18 +1652,18 @@ h3 {
 
 .modal-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 20px;
+  right: 20px;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   color: var(--muted);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: #ffffff;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1681,8 +1681,8 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   color: var(--ink);
   border: 1px solid var(--line);
@@ -1713,7 +1713,7 @@ h3 {
 }
 
 .modal-info {
-  padding: 28px;
+  padding: 42px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -1724,17 +1724,17 @@ h3 {
 /* --- 头部：头像 + 姓名 + 籍贯 + 学位 --- */
 .modal-header {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   align-items: flex-start;
   flex-wrap: wrap;
 }
 
 .modal-avatar {
-  width: 76px;
-  height: 108px;
+  width: 91px;
+  height: 130px;
   flex-shrink: 0;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 2px solid var(--line);
   background: linear-gradient(135deg, #10201c, #087c89 54%, #b7791f);
   color: #ffffff;
@@ -1750,7 +1750,7 @@ h3 {
 }
 
 .modal-avatar span {
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 800;
 }
 
@@ -1762,54 +1762,54 @@ h3 {
 .modal-name-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
 }
 
 .modal-name-row h2 {
-  font-size: 24px;
+  font-size: 28px;
   line-height: 1.2;
   margin: 0;
 }
 
 .modal-native {
-  color: var(--muted);
-  font-size: 14px;
-  margin-top: 2px;
+  color: var(--ink);
+  font-size: 17px;
+  margin-top: 12px;
 }
 
 .modal-degree {
-  color: var(--muted);
-  margin-top: 4px;
-  font-size: 14px;
+  color: var(--ink);
+  margin-top: 12px;
+  font-size: 17px;
 }
 
 .modal-birth {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  margin-top: 4px;
-  font-size: 14px;
+  gap: 9px;
+  color: var(--ink);
+  margin-top: 12px;
+  font-size: 17px;
 }
 
 /* --- 研究方向标签 --- */
 .modal-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 18px;
 }
 
 .modal-tags span {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 4px 12px;
+  min-height: 34px;
+  padding: 6px 16px;
   color: #1f5f4a;
   border: 1px solid #cce4d7;
   border-radius: 999px;
   background: #f0f7f3;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -1840,25 +1840,33 @@ h3 {
 
 .modal-destination-header {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  color: #7f4b08;
-  border: 1px solid #ead7b4;
-  border-radius: 8px;
-  background: #fff8eb;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
   margin-left: auto;
   flex-shrink: 0;
 }
 
-.modal-destination-header svg {
-  flex-shrink: 0;
+.destination-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.3;
 }
 
-.destination-value {
-  font-size: 13px;
+.destination-line svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.destination-unit {
   font-weight: 600;
-  line-height: 1.3;
+}
+
+.destination-city {
+  font-weight: 500;
 }
 
 @media (max-width: 600px) {
@@ -1884,23 +1892,24 @@ h3 {
 .modal-contact-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 18px;
+  margin-top: 12px;
+  margin-bottom: 12px;
 }
 
 .modal-contact-item {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 15px;
 }
 
 .contact-phone {
-  flex: 1 1 120px;
+  flex: 1 1 140px;
   max-width: 35%;
 }
 
 .contact-email {
-  flex: 2 1 200px;
+  flex: 2 1 240px;
   max-width: 65%;
 }
 
@@ -1908,9 +1917,9 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   background: #f3f4f6;
   color: var(--ink);
   flex-shrink: 0;
@@ -1919,83 +1928,22 @@ h3 {
 .contact-content {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .contact-label {
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .contact-value {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--ink);
   word-break: break-all;
-}
-
-.modal-bio-section {
-  margin-top: 4px;
-}
-
-.modal-bio-section.no-contact {
-  margin-top: 0;
-}
-
-.modal-bio-section .modal-section-title {
-  margin-bottom: 8px;
-}
-
-/* --- 个人简介（折叠） --- */
-.modal-bio {
-  position: relative;
-  overflow: hidden;
-  max-height: 88px;
-  transition: max-height 0.3s ease;
-}
-
-.modal-bio.expanded {
-  max-height: none;
-}
-
-.modal-bio p {
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.bio-toggle {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 0;
-  color: var(--green);
-  background: transparent;
-  border: 0;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.bio-toggle:hover {
-  text-decoration: underline;
-}
-
-/* --- 代表成果/个人经历 --- */
-.modal-section {
-  margin-top: 12px;
-}
-
-.modal-section-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 8px;
 }
 
 .modal-list {
@@ -2006,10 +1954,10 @@ h3 {
 
 .modal-list li {
   position: relative;
-  padding-left: 14px;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: var(--muted);
+  padding-left: 20px;
+  margin-bottom: 9px;
+  font-size: 16px;
+  color: var(--ink);
   line-height: 1.6;
 }
 
@@ -2018,6 +1966,98 @@ h3 {
   position: absolute;
   left: 0;
   color: var(--green);
+}
+
+/* --- 成员详情标签页（胶囊分段器） --- */
+.modal-tabs {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.modal-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.modal-tab:hover {
+  background: #e8e8ea;
+}
+
+.modal-tab.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.modal-tab-content {
+  background: #fbfbfb;
+  border-radius: 18px;
+  padding: 24px;
+  margin-top: 10px;
+  min-height: 160px;
+  max-height: 380px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.modal-tab-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-tab-content::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.modal-tab-content::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
+}
+
+.modal-tab-content::-webkit-scrollbar-thumb:hover {
+  background: #c5d1cb;
+}
+
+.modal-tab-panel {
+  animation: modalTabFadeIn 0.2s ease;
+}
+
+@keyframes modalTabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-bio-text {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.modal-empty-text {
+  color: var(--ink);
+  font-size: 16px;
+  text-align: center;
+  padding: 32px 0;
 }
 
 /* --- 更多操作 --- */
@@ -2167,7 +2207,7 @@ h3 {
   width: 100%;
   height: 100%;
   color: #ffffff;
-  font-size: 64px;
+  font-size: 77px;
   font-weight: 800;
 }
 
