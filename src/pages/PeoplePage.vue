@@ -5,7 +5,8 @@ import {
   ArrowUp,
   Award,
   BriefcaseBusiness,
-  ChevronDown,
+  Calendar,
+  ChevronLeft,
   ChevronRight,
   Lock,
   Mail,
@@ -34,11 +35,22 @@ type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experience
 }
 
 const allCohorts = '全部'
+const allResearchDirections = '全部'
+
+// 研究方向按字数少→多排序，字数相同按拼音字母顺序排列
+const researchDirectionKeywords = ['点云', '大模型', '变化检测', '目标检测', '语义分割', '高光谱分类']
+
+const statusOptions = [
+  { value: '全部' as const, label: '全部' },
+  { value: 'current' as const, label: '在读' },
+  { value: 'alumni' as const, label: '毕业' },
+]
 
 const members = ref<StudentProfile[]>([])
 const apiError = ref('')
 const isLoadingMembers = ref(false)
 const activeCohorts = ref<string[]>([allCohorts])
+const activeResearchDirections = ref<string[]>([allResearchDirections])
 const searchText = ref('')
 const statusFilter = ref<'全部' | 'current' | 'alumni'>('全部')
 const cohortSortAsc = ref(false)
@@ -52,6 +64,10 @@ function toggleCohortSort() {
 
 function toggleNameSort() {
   nameSortAsc.value = !nameSortAsc.value
+}
+
+function selectStatus(status: '全部' | 'current' | 'alumni') {
+  statusFilter.value = status
 }
 
 function toggleCohortSelection(cohort: string) {
@@ -73,6 +89,23 @@ function toggleCohortSelection(cohort: string) {
     }
   }
 }
+
+function toggleResearchDirection(direction: string) {
+  if (direction === allResearchDirections) {
+    activeResearchDirections.value = [allResearchDirections]
+  } else {
+    const filtered = activeResearchDirections.value.filter((d) => d !== allResearchDirections)
+
+    if (filtered.includes(direction)) {
+      const newSelection = filtered.filter((d) => d !== direction)
+      activeResearchDirections.value = newSelection.length > 0 ? newSelection : [allResearchDirections]
+    } else {
+      activeResearchDirections.value = [...filtered, direction]
+    }
+  }
+}
+
+
 const editorMode = ref<EditorMode>('create')
 const isEditorOpen = ref(false)
 const editorError = ref('')
@@ -195,11 +228,72 @@ watch([nativeProvince, nativeCity], () => {
   }
 })
 
+// ---- 出生日期三级联 ----
+
+const birthYear = ref('')
+const birthMonth = ref('')
+const birthDay = ref('')
+
+const birthYears = computed(() => {
+  const current = new Date().getFullYear()
+  const years: string[] = []
+  for (let y = current - 60; y <= current; y++) {
+    years.push(String(y))
+  }
+  return years.reverse()
+})
+
+const birthMonths = computed(() =>
+  Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')),
+)
+
+const birthDays = computed(() => {
+  if (!birthYear.value || !birthMonth.value) return []
+  const daysInMonth = new Date(Number(birthYear.value), Number(birthMonth.value), 0).getDate()
+  return Array.from({ length: daysInMonth }, (_, i) => String(i + 1).padStart(2, '0'))
+})
+
+watch([birthYear, birthMonth, birthDay], ([year, month, day]) => {
+  if (year && month && day) {
+    editorForm.value.birthDate = `${year}-${month}-${day}`
+  } else {
+    editorForm.value.birthDate = ''
+  }
+})
+
+function parseBirthDate(raw: string | undefined) {
+  birthYear.value = ''
+  birthMonth.value = ''
+  birthDay.value = ''
+  if (!raw) return
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return
+  const [, y, m, d] = match
+  birthYear.value = y
+  birthMonth.value = m
+  birthDay.value = d
+}
+
 const cohortOrder = computed(() =>
   Array.from(new Set(members.value.map((member) => member.cohort))).sort((a, b) => b.localeCompare(a)),
 )
 
 const cohorts = computed(() => [allCohorts, ...cohortOrder.value])
+
+const sortedResearchDirectionKeywords = computed(() =>
+  researchDirectionKeywords.slice().sort((a, b) => {
+    if (a.length !== b.length) return a.length - b.length
+    return a.localeCompare(b, 'zh-CN')
+  }),
+)
+
+const researchDirectionGroups = computed(() => {
+  const groups: string[][] = []
+  for (let i = 0; i < sortedResearchDirectionKeywords.value.length; i += 2) {
+    groups.push(sortedResearchDirectionKeywords.value.slice(i, i + 2))
+  }
+  return groups
+})
 
 const filteredMembers = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
@@ -207,6 +301,9 @@ const filteredMembers = computed(() => {
   return members.value.filter((member) => {
     const matchesStatus = statusFilter.value === '全部' || member.status === statusFilter.value
     const matchesCohort = activeCohorts.value.includes(allCohorts) || activeCohorts.value.includes(member.cohort)
+    const matchesResearchDirection =
+      activeResearchDirections.value.includes(allResearchDirections) ||
+      activeResearchDirections.value.some((dir) => member.research.some((item) => item.includes(dir)))
     const text = [
       member.name,
       member.cohort,
@@ -221,7 +318,7 @@ const filteredMembers = computed(() => {
       .join(' ')
       .toLowerCase()
 
-    return matchesStatus && matchesCohort && (!keyword || text.includes(keyword))
+    return matchesStatus && matchesCohort && matchesResearchDirection && (!keyword || text.includes(keyword))
   })
 })
 
@@ -242,6 +339,9 @@ const groupedMembers = computed(() => {
     }))
     .filter((group) => group.members.length > 0)
 })
+
+// 当前可见成员的扁平顺序，用于详情弹窗左右切换
+const orderedMembers = computed(() => groupedMembers.value.flatMap((group) => group.members))
 
 const stats = computed(() => {
   const alumni = members.value.filter((member) => member.status === 'alumni').length
@@ -294,6 +394,22 @@ function clearSelectedMember() {
   bioExpanded.value = false
 }
 
+function selectPrevMember() {
+  if (!selectedMember.value || orderedMembers.value.length <= 1) return
+  const index = orderedMembers.value.findIndex((member) => member.id === selectedMember.value!.id)
+  const prevIndex = index <= 0 ? orderedMembers.value.length - 1 : index - 1
+  selectedMember.value = orderedMembers.value[prevIndex]
+  bioExpanded.value = false
+}
+
+function selectNextMember() {
+  if (!selectedMember.value || orderedMembers.value.length <= 1) return
+  const index = orderedMembers.value.findIndex((member) => member.id === selectedMember.value!.id)
+  const nextIndex = index === -1 || index >= orderedMembers.value.length - 1 ? 0 : index + 1
+  selectedMember.value = orderedMembers.value[nextIndex]
+  bioExpanded.value = false
+}
+
 const hasContactInfo = computed(() => {
   if (!selectedMember.value) return false
   return !!(selectedMember.value.phone || selectedMember.value.email)
@@ -320,6 +436,9 @@ function openCreateEditor() {
   nativeCity.value = ''
   destProvince.value = ''
   destCity.value = ''
+  birthYear.value = ''
+  birthMonth.value = ''
+  birthDay.value = ''
   editorError.value = ''
   isEditorOpen.value = true
 }
@@ -329,6 +448,7 @@ function openEditEditor(member: StudentProfile) {
   editorForm.value = toForm(member)
   parseNativePlace(member.nativePlace ?? '')
   parseDestination(member.destination ?? '')
+  parseBirthDate(member.birthDate ?? '')
   editorError.value = ''
   isEditorOpen.value = true
 }
@@ -404,6 +524,7 @@ function createEmptyForm(): MemberForm {
     phone: '',
     wechat: '',
     nativePlace: '',
+    birthDate: '',
     photo: '',
     coverPhoto: '',
     destination: '',
@@ -419,6 +540,7 @@ function toForm(member: StudentProfile): MemberForm {
     phone: member.phone ?? '',
     wechat: member.wechat ?? '',
     nativePlace: member.nativePlace ?? '',
+    birthDate: member.birthDate ?? '',
     photo: member.photo ?? '',
     coverPhoto: member.coverPhoto ?? '',
     destination: member.destination ?? '',
@@ -442,6 +564,7 @@ function fromForm(form: MemberForm): StudentProfile {
     phone: form.phone?.trim(),
     wechat: form.wechat?.trim(),
     nativePlace: form.nativePlace?.trim(),
+    birthDate: form.birthDate?.trim(),
     photo: form.photo?.trim(),
     coverPhoto: form.coverPhoto?.trim(),
     destination: form.destination?.trim(),
@@ -506,48 +629,82 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="member-admin-bar" aria-label="成员管理">
-        <div class="admin-bar-left">
-          <span class="filter-label">筛选</span>
-          <div class="filter-select-wrap">
-            <select v-model="statusFilter" class="filter-select">
-              <option value="全部">全部</option>
-              <option value="current">在读</option>
-              <option value="alumni">毕业</option>
-            </select>
-            <ChevronDown :size="16" class="select-chevron" />
-          </div>
-          <span class="filter-label">排序</span>
-          <div class="sort-group">
-            <button type="button" class="sort-btn" @click="toggleNameSort">
-              按姓氏
-              <component :is="nameSortAsc ? ArrowUp : ArrowDown" :size="14" />
-            </button>
-            <button type="button" class="sort-btn" @click="toggleCohortSort">
-              按年级
-              <component :is="cohortSortAsc ? ArrowUp : ArrowDown" :size="14" />
-            </button>
-          </div>
-        </div>
-        <button v-if="isMember" class="member-create-btn" type="button" @click="openCreateEditor">
-          <Plus :size="20" />
-          <span>新增成员</span>
-        </button>
-      </div>
-
       <div class="cohort-layout">
-        <aside class="cohort-panel" aria-label="届别筛选">
-          <button
-            v-for="cohort in cohorts"
-            :key="cohort"
-            type="button"
-            :class="{ active: activeCohorts.includes(cohort) }"
-            @click="toggleCohortSelection(cohort)"
-          >
-            <span>{{ cohort }}</span>
-            <ChevronRight :size="16" />
+        <aside class="filter-panel" aria-label="成员筛选与排序">
+          <div class="filter-group">
+            <h3 class="filter-panel-title">排序</h3>
+            <div class="sort-group sort-group-vertical">
+              <button type="button" class="sort-btn" @click="toggleNameSort">
+                按姓氏
+                <component :is="nameSortAsc ? ArrowUp : ArrowDown" :size="14" />
+              </button>
+              <button type="button" class="sort-btn" @click="toggleCohortSort">
+                按年级
+                <component :is="cohortSortAsc ? ArrowUp : ArrowDown" :size="14" />
+              </button>
+            </div>
+          </div>
+
+          <h3 class="filter-panel-title">筛选</h3>
+
+          <div class="filter-group">
+            <span class="filter-group-label">状态</span>
+            <div class="filter-pill-row">
+              <button
+                v-for="item in statusOptions"
+                :key="item.value"
+                type="button"
+                :class="['filter-pill', { active: statusFilter === item.value }]"
+                @click="selectStatus(item.value)"
+              >
+                {{ item.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-group-label">年级</span>
+            <div class="filter-pill-grid">
+              <button
+                v-for="cohort in cohorts"
+                :key="cohort"
+                type="button"
+                :class="['filter-pill', { active: activeCohorts.includes(cohort) }]"
+                @click="toggleCohortSelection(cohort)"
+              >
+                {{ cohort }}
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-group research-directions">
+            <span class="filter-group-label">研究方向</span>
+            <div class="filter-pill-flex">
+              <button
+                type="button"
+                :class="['filter-pill', { active: activeResearchDirections.includes(allResearchDirections) }]"
+                @click="toggleResearchDirection(allResearchDirections)"
+              >
+                {{ allResearchDirections }}
+              </button>
+            </div>
+            <div v-for="(group, index) in researchDirectionGroups" :key="index" class="filter-pill-flex">
+              <button
+                v-for="direction in group"
+                :key="direction"
+                type="button"
+                :class="['filter-pill', { active: activeResearchDirections.includes(direction) }]"
+                @click="toggleResearchDirection(direction)"
+              >
+                {{ direction }}
+              </button>
+            </div>
+          </div>
+
+          <button v-if="isMember" class="member-create-btn" type="button" @click="openCreateEditor">
+            <Plus :size="20" />
+            <span>新增成员</span>
           </button>
-          <p>成员信息按届别归档。可同时选择多届。认证后可在本页新增、编辑或删除成员资料。</p>
         </aside>
 
         <div class="member-groups">
@@ -581,6 +738,10 @@ onMounted(() => {
                       <span v-if="isMember && member.nativePlace">
                         <MapPin :size="15" />
                         {{ member.nativePlace }}
+                      </span>
+                      <span v-if="isMember && member.birthDate">
+                        <Calendar :size="15" />
+                        {{ member.birthDate }}
                       </span>
                     </div>
                     <div v-if="isMember && member.destination" class="destination">
@@ -617,239 +778,282 @@ onMounted(() => {
       </div>
     </section>
 
-    <div v-if="selectedMember" class="modal-backdrop" @click="clearSelectedMember"></div>
-    <aside v-if="selectedMember" class="member-modal" role="dialog" aria-modal="true" aria-label="成员详情" @keydown.esc="clearSelectedMember">
-      <button class="modal-close" type="button" aria-label="关闭成员详情" @click="clearSelectedMember">
-        <X :size="22" />
-      </button>
-
-      <div class="modal-body">
-        <div class="modal-info">
-          <div class="modal-header">
-            <div class="modal-avatar">
-              <img v-if="selectedMember.photo" :src="resolvePhotoUrl(selectedMember.photo)" :alt="selectedMember.name" />
-              <span v-else>{{ initials(selectedMember.name) }}</span>
-            </div>
-            <div class="modal-header-text">
-              <div class="modal-name-row">
-                <h2>{{ selectedMember.name }}</h2>
-                <span class="status-badge" :class="selectedMember.status">{{ statusLabel(selectedMember.status) }}</span>
-              </div>
-              <p v-if="selectedMember.nativePlace" class="modal-native">{{ selectedMember.nativePlace }}</p>
-              <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}</p>
-            </div>
-            <div v-if="isMember && selectedMember.status === 'alumni' && selectedMember.destination" class="modal-destination-header">
-              <BriefcaseBusiness :size="14" />
-              <span class="destination-value">{{ [parseDestinationDisplay(selectedMember.destination).city, parseDestinationDisplay(selectedMember.destination).unit].filter(Boolean).join('/') }}</span>
-            </div>
-          </div>
-
-          <div class="modal-tags">
-            <span v-for="tag in selectedMember.research" :key="tag">{{ tag }}</span>
-          </div>
-
-          <div class="modal-divider" :class="{ 'no-contact': !hasContactInfo || !isMember }"></div>
-
-          <div v-if="isMember && hasContactInfo" class="modal-contact-grid">
-            <div v-if="selectedMember.phone" class="modal-contact-item contact-phone">
-              <div class="contact-icon">
-                <Phone :size="15" />
-              </div>
-              <div class="contact-content">
-                <span class="contact-label">电话</span>
-                <span class="contact-value">{{ selectedMember.phone }}</span>
-              </div>
-            </div>
-            <div v-if="selectedMember.email" class="modal-contact-item contact-email">
-              <div class="contact-icon">
-                <Mail :size="15" />
-              </div>
-              <div class="contact-content">
-                <span class="contact-label">邮箱</span>
-                <span class="contact-value">{{ selectedMember.email }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-bio-section" :class="{ 'no-contact': !hasContactInfo || !isMember }">
-            <h4 class="modal-section-title">
-              <UserRound :size="16" />
-              个人简介
-            </h4>
-            <div class="modal-bio" :class="{ expanded: bioExpanded }">
-              <p>{{ selectedMember.bio }}</p>
-              <button v-if="selectedMember.bio && selectedMember.bio.length > 100" type="button" class="bio-toggle" @click="bioExpanded = !bioExpanded">
-                {{ bioExpanded ? '收起' : '展开全部' }}
-              </button>
-            </div>
-          </div>
-
-          <div v-if="selectedMember.achievements.length > 0" class="modal-section">
-            <h4 class="modal-section-title">
-              <Award :size="16" />
-              代表成果
-            </h4>
-            <ul class="modal-list">
-              <li v-for="(item, index) in selectedMember.achievements" :key="index">{{ item }}</li>
-            </ul>
-          </div>
-
-          <div v-if="selectedMember.experiences.length > 0" class="modal-section">
-            <h4 class="modal-section-title">
-              <BriefcaseBusiness :size="16" />
-              个人经历
-            </h4>
-            <ul class="modal-list">
-              <li v-for="(item, index) in selectedMember.experiences" :key="index">{{ item }}</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="modal-photo">
-          <img v-if="selectedMember.coverPhoto" :src="resolvePhotoUrl(selectedMember.coverPhoto)" :alt="selectedMember.name" />
-          <img v-else-if="selectedMember.photo" :src="resolvePhotoUrl(selectedMember.photo)" :alt="selectedMember.name" />
-          <span v-else class="modal-photo-initials">{{ initials(selectedMember.name) }}</span>
-        </div>
-      </div>
-    </aside>
-
-    <div v-if="isEditorOpen" class="drawer-backdrop" @click="closeEditor"></div>
-    <aside v-if="isEditorOpen" class="profile-drawer member-editor" role="dialog" aria-modal="true" aria-label="编辑成员">
-      <button class="drawer-close" type="button" aria-label="关闭编辑器" @click="closeEditor">
-        <X :size="22" />
-      </button>
-
-      <form class="member-editor-form" @submit.prevent="saveMember">
-        <div class="editor-heading">
-          <h2>{{ editorMode === 'create' ? '新增成员' : '编辑成员' }}</h2>
-        </div>
-
-        <div v-if="editorMode === 'edit'" class="editor-photo-section">
-          <span class="editor-section-label">成员头像</span>
-          <PhotoUploader
-            v-model="editorForm.photo"
-            :member-id="editorForm.id"
-            :member-name="editorForm.name"
-            mode="avatar"
-            @upload-success="handlePhotoUploadSuccess"
-            @upload-error="handlePhotoUploadError"
-          />
-        </div>
-
-        <div v-if="editorMode === 'edit'" class="editor-photo-section">
-          <span class="editor-section-label">背景图片</span>
-          <PhotoUploader
-            v-model="editorForm.coverPhoto"
-            :member-id="editorForm.id"
-            :member-name="editorForm.name"
-            mode="cover"
-            @upload-success="handleCoverPhotoUploadSuccess"
-            @upload-error="handlePhotoUploadError"
-          />
-        </div>
-
-        <div class="editor-grid">
-          <label>
-            <span>姓名 <em class="required-hint">(必填)</em></span>
-            <input v-model="editorForm.name" type="text" required />
-          </label>
-          <label>
-            <span>届别 <em class="required-hint">(必填)</em></span>
-            <input v-model="editorForm.cohort" type="text" required />
-          </label>
-        </div>
-        <div class="editor-grid">
-          <label>
-            <span>学位</span>
-            <select v-model="editorForm.degree">
-              <option value="">请选择</option>
-              <option value="硕士">硕士</option>
-              <option value="博士">博士</option>
-            </select>
-          </label>
-          <label>
-            <span>状态</span>
-            <select v-model="editorForm.status">
-              <option value="current">在读</option>
-              <option value="alumni">已毕业</option>
-            </select>
-          </label>
-        </div>
-        <div class="editor-grid">
-          <label>
-            <span>籍贯</span>
-            <select v-model="nativeProvince" @change="nativeCity = ''">
-              <option value="">请选择省份</option>
-              <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
-            </select>
-          </label>
-          <label>
-            <span>&nbsp;</span>
-            <select v-model="nativeCity" :disabled="!nativeProvince">
-              <option value="">请选择城市</option>
-              <option v-for="c in nativeCities" :key="c" :value="c">{{ c }}</option>
-            </select>
-          </label>
-        </div>
-        <div class="editor-grid">
-          <label>
-            <span>电话</span>
-            <input v-model="editorForm.phone" type="text" />
-          </label>
-          <label>
-            <span>邮箱</span>
-            <input v-model="editorForm.email" type="email" />
-          </label>
-        </div>
-
-        <div v-if="editorForm.status !== 'current'" class="editor-destination">
-          <span class="editor-section-label">毕业去向</span>
-          <div class="editor-grid">
-            <label>
-              <select v-model="destProvince" @change="destCity = ''">
-                <option value="">单位所在省</option>
-                <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
-              </select>
-            </label>
-            <label>
-              <select v-model="destCity" :disabled="!destProvince">
-                <option value="">单位所在市</option>
-                <option v-for="c in destCities" :key="c" :value="c">{{ c }}</option>
-              </select>
-            </label>
-          </div>
-          <label class="editor-destination-unit">
-            <input v-model="editorForm.destination" type="text" placeholder="单位名称" />
-          </label>
-        </div>
-
-        <label>
-          <span>研究方向（每行一个）</span>
-          <textarea v-model="editorForm.researchText" rows="3"></textarea>
-        </label>
-        <label>
-          <span>个人简介</span>
-          <textarea v-model="editorForm.bio" rows="4"></textarea>
-        </label>
-        <label>
-          <span>代表成果（每行一个）</span>
-          <textarea v-model="editorForm.achievementsText" rows="4"></textarea>
-        </label>
-        <label>
-          <span>个人经历（每行一个）</span>
-          <textarea v-model="editorForm.experiencesText" rows="4"></textarea>
-        </label>
-
-        <p v-if="editorError" class="login-error">{{ editorError }}</p>
-
-        <div class="login-actions">
-          <button type="submit" class="login-btn login-btn-confirm" :disabled="isSavingMember">
-            <Save :size="17" />
-            {{ isSavingMember ? '保存中...' : '保存' }}
+    <div v-if="selectedMember" class="modal-portal">
+      <div class="modal-backdrop" @click="clearSelectedMember"></div>
+      <div class="modal-stage">
+        <button class="modal-nav modal-nav-prev" type="button" aria-label="上一个成员" :disabled="orderedMembers.length <= 1" @click="selectPrevMember">
+          <ChevronLeft :size="24" />
+        </button>
+        <aside class="member-modal" role="dialog" aria-modal="true" aria-label="成员详情" @keydown.esc="clearSelectedMember" @keydown.left="selectPrevMember" @keydown.right="selectNextMember">
+          <button class="modal-close" type="button" aria-label="关闭成员详情" @click="clearSelectedMember">
+            <X :size="22" />
           </button>
-          <button type="button" class="login-btn login-btn-cancel" @click="closeEditor">取消</button>
+
+          <div class="modal-body">
+                <div class="modal-info">
+                  <div class="modal-header">
+                    <div class="modal-avatar">
+                      <img v-if="selectedMember.photo" :src="resolvePhotoUrl(selectedMember.photo)" :alt="selectedMember.name" />
+                      <span v-else>{{ initials(selectedMember.name) }}</span>
+                    </div>
+                    <div class="modal-header-text">
+                      <div class="modal-name-row">
+                        <h2>{{ selectedMember.name }}</h2>
+                        <span class="status-badge" :class="selectedMember.status">{{ statusLabel(selectedMember.status) }}</span>
+                      </div>
+                      <p v-if="selectedMember.nativePlace" class="modal-native">
+                        {{ selectedMember.nativePlace }}
+                      </p>
+                      <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}</p>
+                      <p v-if="isMember && selectedMember.birthDate" class="modal-birth">
+                        <Calendar :size="14" />
+                        {{ selectedMember.birthDate }}
+                      </p>
+                    </div>
+                    <div v-if="isMember && selectedMember.status === 'alumni' && selectedMember.destination" class="modal-destination-header">
+                      <BriefcaseBusiness :size="14" />
+                      <span class="destination-value">{{ [parseDestinationDisplay(selectedMember.destination).city, parseDestinationDisplay(selectedMember.destination).unit].filter(Boolean).join('/') }}</span>
+                    </div>
+                  </div>
+
+                  <div class="modal-tags">
+                    <span v-for="tag in selectedMember.research" :key="tag">{{ tag }}</span>
+                  </div>
+
+                  <div class="modal-divider" :class="{ 'no-contact': !hasContactInfo || !isMember }"></div>
+
+                  <div v-if="isMember && hasContactInfo" class="modal-contact-grid">
+                    <div v-if="selectedMember.phone" class="modal-contact-item contact-phone">
+                      <div class="contact-icon">
+                        <Phone :size="15" />
+                      </div>
+                      <div class="contact-content">
+                        <span class="contact-label">电话</span>
+                        <span class="contact-value">{{ selectedMember.phone }}</span>
+                      </div>
+                    </div>
+                    <div v-if="selectedMember.email" class="modal-contact-item contact-email">
+                      <div class="contact-icon">
+                        <Mail :size="15" />
+                      </div>
+                      <div class="contact-content">
+                        <span class="contact-label">邮箱</span>
+                        <span class="contact-value">{{ selectedMember.email }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="modal-bio-section" :class="{ 'no-contact': !hasContactInfo || !isMember }">
+                    <h4 class="modal-section-title">
+                      <UserRound :size="16" />
+                      个人简介
+                    </h4>
+                    <div class="modal-bio" :class="{ expanded: bioExpanded }">
+                      <p>{{ selectedMember.bio }}</p>
+                      <button v-if="selectedMember.bio && selectedMember.bio.length > 100" type="button" class="bio-toggle" @click="bioExpanded = !bioExpanded">
+                        {{ bioExpanded ? '收起' : '展开全部' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div v-if="selectedMember.achievements.length > 0" class="modal-section">
+                    <h4 class="modal-section-title">
+                      <Award :size="16" />
+                      代表成果
+                    </h4>
+                    <ul class="modal-list">
+                      <li v-for="(item, index) in selectedMember.achievements" :key="index">{{ item }}</li>
+                    </ul>
+                  </div>
+
+                  <div v-if="selectedMember.experiences.length > 0" class="modal-section">
+                    <h4 class="modal-section-title">
+                      <BriefcaseBusiness :size="16" />
+                      个人经历
+                    </h4>
+                    <ul class="modal-list">
+                      <li v-for="(item, index) in selectedMember.experiences" :key="index">{{ item }}</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="modal-photo">
+                  <img v-if="selectedMember.coverPhoto" :src="resolvePhotoUrl(selectedMember.coverPhoto)" :alt="selectedMember.name" />
+                  <img v-else-if="selectedMember.photo" :src="resolvePhotoUrl(selectedMember.photo)" :alt="selectedMember.name" />
+                  <span v-else class="modal-photo-initials">{{ initials(selectedMember.name) }}</span>
+                </div>
+              </div>
+            </aside>
+            <button class="modal-nav modal-nav-next" type="button" aria-label="下一个成员" :disabled="orderedMembers.length <= 1" @click="selectNextMember">
+              <ChevronRight :size="24" />
+            </button>
         </div>
-      </form>
-    </aside>
+    </div>
+
+    <div v-if="isEditorOpen" class="editor-portal">
+      <div class="editor-backdrop" @click="closeEditor"></div>
+      <aside class="member-editor-card" role="dialog" aria-modal="true" aria-label="编辑成员">
+        <form class="member-editor-form" @submit.prevent="saveMember">
+          <div class="editor-header">
+            <div class="editor-heading">
+              <h2>{{ editorMode === 'create' ? '新增成员' : '编辑成员' }}</h2>
+            </div>
+            <button class="editor-close" type="button" aria-label="关闭编辑器" @click="closeEditor">
+              <X :size="22" />
+            </button>
+          </div>
+
+          <div class="editor-body">
+            <div v-if="editorMode === 'edit'" class="editor-photo-section">
+              <span class="editor-section-label">成员头像</span>
+              <PhotoUploader
+                v-model="editorForm.photo"
+                :member-id="editorForm.id"
+                :member-name="editorForm.name"
+                mode="avatar"
+                @upload-success="handlePhotoUploadSuccess"
+                @upload-error="handlePhotoUploadError"
+              />
+            </div>
+
+            <div v-if="editorMode === 'edit'" class="editor-photo-section">
+              <span class="editor-section-label">背景图片</span>
+              <PhotoUploader
+                v-model="editorForm.coverPhoto"
+                :member-id="editorForm.id"
+                :member-name="editorForm.name"
+                mode="cover"
+                @upload-success="handleCoverPhotoUploadSuccess"
+                @upload-error="handlePhotoUploadError"
+              />
+            </div>
+
+            <div class="editor-grid">
+              <label>
+                <span>姓名 <em class="required-hint">(必填)</em></span>
+                <input v-model="editorForm.name" type="text" required />
+              </label>
+              <label>
+                <span>届别 <em class="required-hint">(必填)</em></span>
+                <input v-model="editorForm.cohort" type="text" required />
+              </label>
+            </div>
+            <div class="editor-grid">
+              <label>
+                <span>学位</span>
+                <select v-model="editorForm.degree">
+                  <option value="">请选择</option>
+                  <option value="硕士">硕士</option>
+                  <option value="博士">博士</option>
+                </select>
+              </label>
+              <label>
+                <span>状态</span>
+                <select v-model="editorForm.status">
+                  <option value="current">在读</option>
+                  <option value="alumni">已毕业</option>
+                </select>
+              </label>
+            </div>
+            <div class="editor-grid">
+              <label>
+                <span>籍贯</span>
+                <select v-model="nativeProvince" @change="nativeCity = ''">
+                  <option value="">请选择省份</option>
+                  <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
+                </select>
+              </label>
+              <label>
+                <span>&nbsp;</span>
+                <select v-model="nativeCity" :disabled="!nativeProvince">
+                  <option value="">请选择城市</option>
+                  <option v-for="c in nativeCities" :key="c" :value="c">{{ c }}</option>
+                </select>
+              </label>
+            </div>
+            <div class="editor-grid">
+              <label>
+                <span>出生日期</span>
+                <select v-model="birthYear" @change="birthMonth = ''; birthDay = ''">
+                  <option value="">年</option>
+                  <option v-for="y in birthYears" :key="y" :value="y">{{ y }}</option>
+                </select>
+              </label>
+              <label>
+                <span>&nbsp;</span>
+                <div class="birth-date-row">
+                  <select v-model="birthMonth" :disabled="!birthYear" @change="birthDay = ''">
+                    <option value="">月</option>
+                    <option v-for="m in birthMonths" :key="m" :value="m">{{ m }}</option>
+                  </select>
+                  <select v-model="birthDay" :disabled="!birthYear || !birthMonth">
+                    <option value="">日</option>
+                    <option v-for="d in birthDays" :key="d" :value="d">{{ d }}</option>
+                  </select>
+                </div>
+              </label>
+            </div>
+            <div class="editor-grid">
+              <label>
+                <span>电话</span>
+                <input v-model="editorForm.phone" type="text" />
+              </label>
+              <label>
+                <span>邮箱</span>
+                <input v-model="editorForm.email" type="email" />
+              </label>
+            </div>
+
+            <div v-if="editorForm.status !== 'current'" class="editor-destination">
+              <span class="editor-section-label">毕业去向</span>
+              <div class="editor-grid">
+                <label>
+                  <select v-model="destProvince" @change="destCity = ''">
+                    <option value="">单位所在省</option>
+                    <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
+                  </select>
+                </label>
+                <label>
+                  <select v-model="destCity" :disabled="!destProvince">
+                    <option value="">单位所在市</option>
+                    <option v-for="c in destCities" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </label>
+              </div>
+              <label class="editor-destination-unit">
+                <input v-model="editorForm.destination" type="text" placeholder="单位名称" />
+              </label>
+            </div>
+
+            <label>
+              <span>研究方向（每行一个）</span>
+              <textarea v-model="editorForm.researchText" rows="3"></textarea>
+            </label>
+            <label>
+              <span>个人简介</span>
+              <textarea v-model="editorForm.bio" rows="4"></textarea>
+            </label>
+            <label>
+              <span>代表成果（每行一个）</span>
+              <textarea v-model="editorForm.achievementsText" rows="4"></textarea>
+            </label>
+            <label>
+              <span>个人经历（每行一个）</span>
+              <textarea v-model="editorForm.experiencesText" rows="4"></textarea>
+            </label>
+
+            <p v-if="editorError" class="login-error">{{ editorError }}</p>
+          </div>
+
+          <div class="editor-footer">
+            <button type="submit" class="login-btn login-btn-confirm" :disabled="isSavingMember">
+              <Save :size="17" />
+              {{ isSavingMember ? '保存中...' : '保存' }}
+            </button>
+            <button type="button" class="login-btn login-btn-cancel" @click="closeEditor">取消</button>
+          </div>
+        </form>
+      </aside>
+    </div>
   </main>
 </template>

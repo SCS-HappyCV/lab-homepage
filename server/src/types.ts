@@ -11,6 +11,7 @@ export interface StudentRecord {
   phone?: string
   wechat?: string
   nativePlace?: string
+  birthDate?: string
   photo?: string
   coverPhoto?: string
   destination?: string

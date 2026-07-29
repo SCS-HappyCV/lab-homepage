@@ -267,6 +267,7 @@ function withDefaults(input: Partial<StudentRecord>, forcedId?: string): Student
     phone: String(input.phone ?? ''),
     wechat: String(input.wechat ?? ''),
     nativePlace: String(input.nativePlace ?? ''),
+    birthDate: String(input.birthDate ?? ''),
     photo: String(input.photo ?? ''),
     coverPhoto: String(input.coverPhoto ?? ''),
     destination: String(input.destination ?? ''),

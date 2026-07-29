@@ -28,6 +28,7 @@ export function initDatabase(db: AppDatabase) {
       phone TEXT,
       wechat TEXT,
       nativePlace TEXT,
+      birthDate TEXT,
       photo TEXT,
       coverPhoto TEXT,
       destination TEXT,

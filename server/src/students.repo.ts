@@ -53,9 +53,9 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
       db.prepare(
         `INSERT INTO students (
           id, name, cohort, degree, status, research, email, phone, wechat,
-          nativePlace, photo, coverPhoto, destination, bio, achievements, experiences,
+          nativePlace, birthDate, photo, coverPhoto, destination, bio, achievements, experiences,
           sortOrder, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         row.id,
         row.name,
@@ -67,6 +67,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         row.phone ?? '',
         row.wechat ?? '',
         row.nativePlace ?? '',
+        row.birthDate ?? '',
         row.photo ?? '',
         row.coverPhoto ?? '',
         row.destination ?? '',
@@ -90,7 +91,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
       db.prepare(
         `UPDATE students SET
           name = ?, cohort = ?, degree = ?, status = ?, research = ?,
-          email = ?, phone = ?, wechat = ?, nativePlace = ?, photo = ?,
+          email = ?, phone = ?, wechat = ?, nativePlace = ?, birthDate = ?, photo = ?,
           coverPhoto = ?, destination = ?, bio = ?, achievements = ?, experiences = ?,
           sortOrder = ?, createdAt = ?, updatedAt = ?
         WHERE id = ?`,
@@ -104,6 +105,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         row.phone ?? '',
         row.wechat ?? '',
         row.nativePlace ?? '',
+        row.birthDate ?? '',
         row.photo ?? '',
         row.coverPhoto ?? '',
         row.destination ?? '',
@@ -150,6 +152,13 @@ function normalizeStudent(student: StudentRecord): StudentRecord {
     degree: student.degree.trim(),
     email: student.email.trim(),
     bio: student.bio.trim(),
+    nativePlace: normalizeOptionalString(student.nativePlace),
+    birthDate: normalizeOptionalString(student.birthDate),
+    phone: normalizeOptionalString(student.phone),
+    wechat: normalizeOptionalString(student.wechat),
+    photo: normalizeOptionalString(student.photo),
+    coverPhoto: normalizeOptionalString(student.coverPhoto),
+    destination: normalizeOptionalString(student.destination),
     research: normalizeArray(student.research),
     achievements: normalizeArray(student.achievements),
     experiences: normalizeArray(student.experiences),
@@ -183,6 +192,11 @@ function fromRow(row: StudentRow): StudentRecord {
     achievements: parseArray(row.achievements),
     experiences: parseArray(row.experiences),
   }
+}
+
+function normalizeOptionalString(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined
+  return String(value).trim() || undefined
 }
 
 function parseArray(value: string) {
