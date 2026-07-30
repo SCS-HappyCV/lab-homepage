@@ -1,17 +1,17 @@
 /**
  * 专利识别功能测试脚本
- * 使用方法: npx tsx test-recognition.mjs <pdf文件路径>
+ * 使用方法: npx tsx scripts/test-recognition.mjs <pdf文件路径>
  */
 
-import { createPatentRuleExtractor } from './src/patent/services/patent-rule-extractor.js'
-import { createPatentValidator } from './src/patent/services/patent-validator.js'
+import { createPatentRuleExtractor } from '../src/patent/services/patent-rule-extractor.js'
+import { createPatentValidator } from '../src/patent/services/patent-validator.js'
 import fs from 'fs/promises'
 
 const pdfFile = process.argv[2]
 
 if (!pdfFile) {
   console.error('❌ 请提供PDF文件路径')
-  console.error('使用方法: npx tsx test-recognition.mjs <pdf文件路径>')
+  console.error('使用方法: npx tsx scripts/test-recognition.mjs <pdf文件路径>')
   process.exit(1)
 }
 

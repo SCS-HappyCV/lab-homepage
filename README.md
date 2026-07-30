@@ -203,7 +203,7 @@ npm install
 # 创建 .env 文件，参考上方"环境配置"章节
 npm run build
 # 如需从 JSON 备份导入数据：npm run db:import-json
-pm2 start ecosystem.config.cjs
+pm2 start ../ecosystem.config.cjs
 pm2 save
 ```
 

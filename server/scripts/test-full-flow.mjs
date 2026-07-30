@@ -3,19 +3,19 @@
  * 测试：PDF提取 → 规则识别 → 保存
  */
 
-import { createPdfTextExtractor } from './src/patent/services/pdf-text-extractor.js'
-import { createPatentRuleExtractor } from './src/patent/services/patent-rule-extractor.js'
-import { createPatentValidator } from './src/patent/services/patent-validator.js'
-import { createSimplePatentRepository } from './src/patent/simple-patent.repo.js'
-import { openDatabase } from './src/db.js'
-import { loadConfig } from './src/config.js'
+import { createPdfTextExtractor } from '../src/patent/services/pdf-text-extractor.js'
+import { createPatentRuleExtractor } from '../src/patent/services/patent-rule-extractor.js'
+import { createPatentValidator } from '../src/patent/services/patent-validator.js'
+import { createSimplePatentRepository } from '../src/patent/simple-patent.repo.js'
+import { openDatabase } from '../src/db.js'
+import { loadConfig } from '../src/config.js'
 import fs from 'fs/promises'
 
 const pdfFile = process.argv[2]
 
 if (!pdfFile) {
   console.error('❌ 请提供PDF文件路径')
-  console.error('使用方法: npx tsx test-full-flow.mjs <pdf文件路径>')
+  console.error('使用方法: npx tsx scripts/test-full-flow.mjs <pdf文件路径>')
   process.exit(1)
 }
 

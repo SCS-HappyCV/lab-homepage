@@ -3,10 +3,10 @@
  * 直接在服务器端测试识别流程，不需要API认证
  */
 
-import { createPdfTextExtractor } from './src/patent/services/pdf-text-extractor.js'
-import { createPatentRuleExtractor } from './src/patent/services/patent-rule-extractor.js'
-import { createPatentValidator } from './src/patent/services/patent-validator.js'
-import { createPatentFileStorage } from './src/patent/services/patent-file-storage.js'
+import { createPdfTextExtractor } from '../src/patent/services/pdf-text-extractor.js'
+import { createPatentRuleExtractor } from '../src/patent/services/patent-rule-extractor.js'
+import { createPatentValidator } from '../src/patent/services/patent-validator.js'
+import { createPatentFileStorage } from '../src/patent/services/patent-file-storage.js'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -14,7 +14,7 @@ const pdfFile = process.argv[2]
 
 if (!pdfFile) {
   console.error('❌ 请提供PDF文件路径')
-  console.error('使用方法: npx tsx test-server-recognition.mjs <pdf文件路径>')
+  console.error('使用方法: npx tsx scripts/test-server-recognition.mjs <pdf文件路径>')
   process.exit(1)
 }
 

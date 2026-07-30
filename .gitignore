@@ -31,3 +31,13 @@ design
 *.sln
 *.sw?
 data/lab-homepage.db
+
+# Server-specific ignores (merged from server/.gitignore)
+server/.env.local
+server/.env.production
+server/*.tmp
+server/*.temp
+server/dump.pm2
+server/coverage/
+server/*.tsbuildinfo
+Thumbs.db

@@ -10,7 +10,7 @@ PDF_FILE="$1"
 
 if [ -z "$PDF_FILE" ]; then
     echo "❌ 请提供PDF文件路径"
-    echo "使用方法: ./test-upload-flow.sh <pdf文件路径>"
+    echo "使用方法: ./scripts/test-upload-flow.sh <pdf文件路径>"
     exit 1
 fi
 

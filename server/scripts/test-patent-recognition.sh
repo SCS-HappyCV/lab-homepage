@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 专利识别测试脚本
-# 使用方法: ./test-patent-recognition.sh <pdf文件路径>
+# 使用方法: ./scripts/test-patent-recognition.sh <pdf文件路径>
 
 set -e
 
@@ -10,7 +10,7 @@ PDF_FILE="$1"
 
 if [ -z "$PDF_FILE" ]; then
     echo "❌ 请提供PDF文件路径"
-    echo "使用方法: ./test-patent-recognition.sh <pdf文件路径>"
+    echo "使用方法: ./scripts/test-patent-recognition.sh <pdf文件路径>"
     exit 1
 fi
 
