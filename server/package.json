@@ -18,7 +18,6 @@
     "pm2:delete": "pm2 delete lab-homepage-api",
     "pm2:logs": "pm2 logs lab-homepage-api",
     "pm2:status": "pm2 status",
-    "deploy": "./deploy.sh",
     "update": "./update.sh"
   },
   "dependencies": {
