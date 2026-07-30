@@ -4,6 +4,9 @@
 
 set -e
 
+export PM2_HOME=/var/www/lab-homepage/.pm2
+umask 002
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "🌐 构建前端..."

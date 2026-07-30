@@ -32,6 +32,9 @@ design
 *.sw?
 data/lab-homepage.db
 
+# PM2 shared runtime directory
+.pm2/
+
 # Server-specific ignores (merged from server/.gitignore)
 server/.env.local
 server/.env.production

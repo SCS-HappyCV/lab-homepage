@@ -12,6 +12,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3003,
+        PM2_HOME: '/var/www/lab-homepage/.pm2',
       },
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       // 优雅重启
