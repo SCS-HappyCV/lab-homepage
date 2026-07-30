@@ -23,30 +23,6 @@
 
 ---
 
-## 快速开始
-
-### 前端开发
-
-```bash
-npm install
-npm run dev
-```
-
-访问 `http://localhost:5173`
-
-### 后端开发
-
-```bash
-cd server
-npm install
-# 创建 .env 文件，参考下方"环境配置"章节填入配置
-npm run dev             # 启动开发服务器 (默认端口 3001)
-```
-
-前端本地开发时，`vite.config.ts` 已配置将 `/uploads` 请求代理到后端。
-
----
-
 ## 项目结构
 
 ```
@@ -77,6 +53,75 @@ lab-homepage/
 ├── scripts/                      # 前端工具脚本
 ├── docs/                         # 构建输出 (GitHub Pages)
 └── .github/workflows/            # CI/CD
+```
+
+---
+
+## 部署
+
+### 快速开始
+
+#### 前端开发
+
+```bash
+npm install
+npm run dev
+```
+
+访问 `http://localhost:5173`
+
+#### 后端开发
+
+```bash
+cd server
+npm install
+# 创建 .env 文件，参考下方"环境配置"章节填入配置
+npm run dev             # 启动开发服务器 (默认端口 3001)
+```
+
+前端本地开发时，`vite.config.ts` 已配置将 `/uploads` 请求代理到后端。
+
+### 重启
+
+生产环境使用项目根目录的 [`restart.sh`](restart.sh) 一键重启：
+
+```bash
+./restart.sh
+```
+
+该脚本会依次完成：
+
+1. 构建前端到 `docs/`
+2. 构建后端到 `server/dist/`
+3. 重启 PM2 进程 `lab-homepage-api`
+
+如需手动操作，可执行：
+
+```bash
+cd server
+npm install
+npm run build
+pm2 start ../ecosystem.config.cjs
+pm2 save
+```
+
+配置反向代理将 `https://api.scs-happycv.top` 转发到 `http://127.0.0.1:3003`。
+
+> 多用户管理说明：本项目使用共享 `PM2_HOME=/var/www/lab-homepage/.pm2`。若其他用户（如 `zw403`）也需要执行 `pm2 status`、`pm2 logs` 等命令，需要在其 shell 配置中设置 `PM2_HOME`：
+> - bash: `export PM2_HOME=/var/www/lab-homepage/.pm2`
+> - fish: `set -x PM2_HOME /var/www/lab-homepage/.pm2`
+
+### 前端部署 (GitHub Actions)
+
+推送到 `main` 分支自动触发构建和部署。确保仓库 Settings → Pages 的 Source 设为 `GitHub Actions`。
+
+构建输出到 `docs/` 目录，路由使用 Hash 模式，刷新不会 404。
+
+验证服务：
+
+```bash
+curl https://api.scs-happycv.top/health
+pm2 logs lab-homepage-api
 ```
 
 ---
@@ -187,37 +232,6 @@ npm run db:import-json
 
 ---
 
-## 部署
-
-### 前端 (GitHub Actions)
-
-推送到 `main` 分支自动触发构建和部署。确保仓库 Settings → Pages 的 Source 设为 `GitHub Actions`。
-
-构建输出到 `docs/` 目录，路由使用 Hash 模式，刷新不会 404。
-
-### 后端 (PM2)
-
-```bash
-cd server
-npm install
-# 创建 .env 文件，参考上方"环境配置"章节
-npm run build
-# 如需从 JSON 备份导入数据：npm run db:import-json
-pm2 start ../ecosystem.config.cjs
-pm2 save
-```
-
-配置反向代理将 `https://api.scs-happycv.top` 转发到 `http://127.0.0.1:3003`。
-
-验证服务：
-
-```bash
-curl https://api.scs-happycv.top/health
-pm2 logs lab-homepage-api
-```
-
----
-
 ## 测试
 
 ```bash
@@ -244,6 +258,7 @@ cd server && npm test
 | `cd server && npm run build` | 编译后端 TypeScript |
 | `cd server && npm test` | 运行后端测试 |
 | `cd server && npm run db:export` | 导出成员数据到 JSON |
+| `./restart.sh` | 生产环境一键构建并重启服务 |
 
 ---
 
