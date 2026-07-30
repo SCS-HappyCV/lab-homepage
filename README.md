@@ -32,11 +32,7 @@ npm install
 npm run dev
 ```
 
-访问 `http://localhost:5173`，页面包括：
-
-- `/` — 首页
-- `/#/people` — 团队成员页
-- `/#/gallery` — 照片墙页
+访问 `http://localhost:5173`
 
 ### 后端开发
 
@@ -82,39 +78,6 @@ lab-homepage/
 ├── docs/                         # 构建输出 (GitHub Pages)
 └── .github/workflows/            # CI/CD
 ```
-
----
-
-## 成员数据维护
-
-成员页 (`/#/people`) 所有数据均来自后端 API，SQLite 是唯一数据源。登录后可在页面上直接新增、编辑、删除成员。
-
-### 新增/编辑成员
-
-1. 访问 `/#/people`
-2. 点击右上角「新增成员」或在成员卡片上点击「编辑」
-3. 填写表单并保存
-
-**毕业生**：将「状态」改为「已毕业」，并填写毕业去向。
-
-### 成员照片
-
-成员头像和背景图通过管理后台上传，存储在服务器 `UPLOAD_DIR`（生产环境为 `/var/www/uploads/students`）下，按届别分目录。上传时会自动压缩（最长边 1200px、质量 82、阈值 800KB）。
-
-同一位成员重复上传头像或背景图时，新文件会**覆盖**旧文件，旧文件会从服务器删除，不会留下历史副本。
-
-未上传照片时，系统会自动显示姓名缩写头像。
-
-### 从静态照片迁移
-
-如果历史上存在 `public/students/` 下的静态照片，需要一次性迁移到服务器上传目录并更新数据库：
-
-```bash
-cd server
-npx tsx scripts/migrate-static-photos.ts
-```
-
-迁移完成后即可删除 `public/students/` 目录。
 
 ---
 

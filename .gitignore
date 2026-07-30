@@ -17,7 +17,8 @@ server/data
 server/dist
 
 .claude
-CLAUDE.md
+
+design
 
 # Editor directories and files
 .vscode/*
