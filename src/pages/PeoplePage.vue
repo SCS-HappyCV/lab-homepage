@@ -105,6 +105,13 @@ function toggleResearchDirection(direction: string) {
   }
 }
 
+function clearFilters() {
+  searchText.value = ''
+  statusFilter.value = '全部'
+  activeCohorts.value = [allCohorts]
+  activeResearchDirections.value = [allResearchDirections]
+}
+
 
 const editorMode = ref<EditorMode>('create')
 const isEditorOpen = ref(false)
@@ -293,6 +300,15 @@ const researchDirectionGroups = computed(() => {
     groups.push(sortedResearchDirectionKeywords.value.slice(i, i + 2))
   }
   return groups
+})
+
+const hasActiveFilters = computed(() => {
+  return (
+    searchText.value.trim() !== '' ||
+    statusFilter.value !== '全部' ||
+    !activeCohorts.value.includes(allCohorts) ||
+    !activeResearchDirections.value.includes(allResearchDirections)
+  )
 })
 
 const filteredMembers = computed(() => {
@@ -619,19 +635,17 @@ onMounted(() => {
         <div>
           <p class="section-kicker">Directory</p>
           <h2>团队成员档案</h2>
-          <p v-if="isLoadingMembers" class="api-state">加载中... / Loading...</p>
-          <p v-else-if="apiError" class="api-state warning">{{ apiError }}</p>
-        </div>
-        <div class="member-admin-actions">
-          <label class="people-search">
-            <Search :size="18" />
-            <input v-model="searchText" type="search" placeholder="搜索姓名、方向、邮箱或去向" />
-          </label>
+          <p v-if="apiError" class="api-state warning">{{ apiError }}</p>
         </div>
       </div>
 
       <div class="cohort-layout">
         <aside class="filter-panel" aria-label="成员筛选与排序">
+          <label class="people-search filter-panel-search">
+            <Search :size="18" />
+            <input v-model="searchText" type="search" placeholder="搜索姓名、方向、邮箱或去向" />
+          </label>
+
           <div class="filter-group">
             <h3 class="filter-panel-title">排序</h3>
             <div class="sort-group sort-group-vertical">
@@ -702,6 +716,11 @@ onMounted(() => {
             </div>
           </div>
 
+          <button v-if="hasActiveFilters" class="filter-clear-btn" type="button" @click="clearFilters">
+            <X :size="16" />
+            <span>清除筛选</span>
+          </button>
+
           <button v-if="isMember" class="member-create-btn" type="button" @click="openCreateEditor">
             <Plus :size="20" />
             <span>新增成员</span>
@@ -709,6 +728,12 @@ onMounted(() => {
         </aside>
 
         <div class="member-groups">
+          <div v-if="isLoadingMembers" class="member-loading">
+            <span>加载中…</span>
+            <span class="loading-dots" aria-hidden="true"></span>
+            <span>Loading...</span>
+          </div>
+
           <section v-for="group in groupedMembers" :key="group.cohort" class="member-group">
             <div class="member-group-heading">
               <h3>{{ group.cohort }}</h3>
@@ -770,16 +795,10 @@ onMounted(() => {
             </div>
           </section>
 
-          <div v-if="groupedMembers.length === 0" class="empty-state">
+          <div v-if="groupedMembers.length === 0 && !isLoadingMembers" class="empty-state">
             <UserRound :size="36" />
-            <template v-if="isLoadingMembers">
-              <h3>加载中... / Loading...</h3>
-              <p>正在获取团队成员数据</p>
-            </template>
-            <template v-else>
-              <h3>没有匹配的成员</h3>
-              <p>可以清空搜索词，或调整届别筛选。</p>
-            </template>
+            <h3>没有匹配的成员</h3>
+            <p>可以清空搜索词，或调整届别筛选。</p>
           </div>
         </div>
       </div>

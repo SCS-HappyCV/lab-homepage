@@ -1,13 +1,22 @@
 export type GalleryCategory = string
 
-export interface GalleryItem {
+export interface GalleryPhoto {
+  id: string
+  image: string
+  thumbnail?: string
+  caption?: string
+}
+
+export interface GalleryEvent {
   id: string
   year: string
-  category: GalleryCategory
+  categories: GalleryCategory[]
   title: string
   date: string
   location: string
-  image: string
-  thumbnail?: string
+  description?: string
+  coverImage: string
+  coverThumbnail?: string
+  photos: GalleryPhoto[]
   featured?: boolean
 }

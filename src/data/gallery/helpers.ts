@@ -1,4 +1,5 @@
 import { publicAsset } from '../../utils/publicAsset'
+import type { GalleryPhoto } from './types'
 
 function thumbnailFileName(fileName: string) {
   return fileName.replace(/\.[^.]+$/, '.webp')
@@ -20,5 +21,15 @@ export function labImage(yearOrFileName: string, fileName?: string) {
   return {
     image: labPhoto(yearOrFileName, fileName),
     thumbnail: labThumbnail(yearOrFileName, fileName),
+  }
+}
+
+export function makeLabPhoto(yearOrFileName: string, fileName?: string, caption?: string): GalleryPhoto {
+  const resolvedFileName = fileName ?? yearOrFileName
+  const year = fileName ? yearOrFileName : ''
+  return {
+    id: `${year ? `${year}-` : ''}${resolvedFileName.replace(/\.[^.]+$/, '')}`,
+    ...labImage(yearOrFileName, fileName),
+    caption,
   }
 }

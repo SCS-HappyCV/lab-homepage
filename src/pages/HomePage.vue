@@ -18,7 +18,6 @@ import {
   Sparkles,
   Users,
 } from 'lucide-vue-next'
-import { sortedGalleryItems } from '../data/gallery/index'
 import { publicAsset } from '../utils/publicAsset'
 import PatentModal from '../components/PatentModal.vue'
 
@@ -53,8 +52,6 @@ const workItems = [
   { title: '软件', meta: 'Software', status: '开放计划中', icon: Code2 },
   { title: '专利', meta: 'Patents', status: '持续沉淀', icon: FileBadge2, clickable: true },
 ]
-
-const homeGallery = sortedGalleryItems.slice(0, 3)
 
 // 专利弹窗状态
 const showPatentModal = ref(false)
