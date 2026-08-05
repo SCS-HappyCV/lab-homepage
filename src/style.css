@@ -860,32 +860,6 @@ h3 {
   font-size: 14px;
 }
 
-/* ---- 清除筛选按钮 ---- */
-.filter-clear-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 44px;
-  padding: 10px 26px;
-  margin-bottom: 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  color: var(--muted);
-  background: #ffffff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
-}
-
-.filter-clear-btn:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-  color: var(--ink);
-}
-
 .filter-label {
   font-size: 13px;
   font-weight: 700;
@@ -1870,9 +1844,16 @@ h3 {
   margin-top: 12px;
 }
 
+.modal-degree-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 12px;
+}
+
 .modal-degree {
   color: var(--ink);
-  margin-top: 12px;
   font-size: 17px;
 }
 
@@ -1881,7 +1862,6 @@ h3 {
   align-items: center;
   gap: 9px;
   color: var(--ink);
-  margin-top: 12px;
   font-size: 17px;
 }
 

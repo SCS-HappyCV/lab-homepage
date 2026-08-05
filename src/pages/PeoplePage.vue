@@ -37,8 +37,8 @@ type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experience
 const allCohorts = '全部'
 const allResearchDirections = '全部'
 
-// 研究方向按字数少→多排序，字数相同按拼音字母顺序排列
-const researchDirectionKeywords = ['点云', '大模型', '变化检测', '目标检测', '语义分割', '高光谱分类']
+// 研究方向按每行两个的固定顺序排列
+const researchDirectionKeywords = ['点云', '大模型', '高光谱', '变化检测', '目标检测', '语义分割']
 
 const statusOptions = [
   { value: '全部' as const, label: '全部' },
@@ -104,14 +104,6 @@ function toggleResearchDirection(direction: string) {
     }
   }
 }
-
-function clearFilters() {
-  searchText.value = ''
-  statusFilter.value = '全部'
-  activeCohorts.value = [allCohorts]
-  activeResearchDirections.value = [allResearchDirections]
-}
-
 
 const editorMode = ref<EditorMode>('create')
 const isEditorOpen = ref(false)
@@ -287,28 +279,12 @@ const cohortOrder = computed(() =>
 
 const cohorts = computed(() => [allCohorts, ...cohortOrder.value])
 
-const sortedResearchDirectionKeywords = computed(() =>
-  researchDirectionKeywords.slice().sort((a, b) => {
-    if (a.length !== b.length) return a.length - b.length
-    return a.localeCompare(b, 'zh-CN')
-  }),
-)
-
 const researchDirectionGroups = computed(() => {
   const groups: string[][] = []
-  for (let i = 0; i < sortedResearchDirectionKeywords.value.length; i += 2) {
-    groups.push(sortedResearchDirectionKeywords.value.slice(i, i + 2))
+  for (let i = 0; i < researchDirectionKeywords.length; i += 2) {
+    groups.push(researchDirectionKeywords.slice(i, i + 2))
   }
   return groups
-})
-
-const hasActiveFilters = computed(() => {
-  return (
-    searchText.value.trim() !== '' ||
-    statusFilter.value !== '全部' ||
-    !activeCohorts.value.includes(allCohorts) ||
-    !activeResearchDirections.value.includes(allResearchDirections)
-  )
 })
 
 const filteredMembers = computed(() => {
@@ -367,7 +343,7 @@ const stats = computed(() => {
     { label: '成员档案', value: members.value.length },
     { label: '在读学生', value: current },
     { label: '历届毕业生', value: alumni },
-    { label: '届别分组', value: cohorts.value.length - 1 },
+    { label: '年级数量', value: cohorts.value.length - 1 },
   ]
 })
 
@@ -620,7 +596,7 @@ onMounted(() => {
       <div class="people-hero-content">
         <p class="eyebrow">People Directory</p>
         <h1 id="people-title">团队成员</h1>
-        <p>按届别管理在读学生与历届毕业生，集中展示照片、研究方向、代表成果、个人经历、联系方式和毕业去向。</p>
+        <p>汇集在读学生与历届毕业生，集中展示照片、研究方向、代表成果、个人经历、联系方式和毕业去向。</p>
         <div class="people-stats" aria-label="成员概览">
           <article v-for="item in stats" :key="item.label">
             <strong>{{ item.value }}</strong>
@@ -716,11 +692,6 @@ onMounted(() => {
             </div>
           </div>
 
-          <button v-if="hasActiveFilters" class="filter-clear-btn" type="button" @click="clearFilters">
-            <X :size="16" />
-            <span>清除筛选</span>
-          </button>
-
           <button v-if="isMember" class="member-create-btn" type="button" @click="openCreateEditor">
             <Plus :size="20" />
             <span>新增成员</span>
@@ -736,7 +707,7 @@ onMounted(() => {
 
           <section v-for="group in groupedMembers" :key="group.cohort" class="member-group">
             <div class="member-group-heading">
-              <h3>{{ group.cohort }}</h3>
+              <h3>{{ group.cohort }}级</h3>
               <span>{{ group.members.length }} 人</span>
             </div>
 
@@ -798,7 +769,7 @@ onMounted(() => {
           <div v-if="groupedMembers.length === 0 && !isLoadingMembers" class="empty-state">
             <UserRound :size="36" />
             <h3>没有匹配的成员</h3>
-            <p>可以清空搜索词，或调整届别筛选。</p>
+            <p>可以清空搜索词，或调整年级筛选。</p>
           </div>
         </div>
       </div>
@@ -830,11 +801,13 @@ onMounted(() => {
                       <p v-if="selectedMember.nativePlace" class="modal-native">
                         {{ selectedMember.nativePlace }}
                       </p>
-                      <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}</p>
-                      <p v-if="isMember && selectedMember.birthDate" class="modal-birth">
-                        <Calendar :size="14" />
-                        {{ selectedMember.birthDate }}
-                      </p>
+                      <div class="modal-degree-row">
+                        <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}级</p>
+                        <p v-if="isMember && selectedMember.birthDate" class="modal-birth">
+                          <Calendar :size="14" />
+                          {{ selectedMember.birthDate }}
+                        </p>
+                      </div>
                     </div>
                     <div v-if="isMember && selectedMember.status === 'alumni' && selectedMember.destination" class="modal-destination-header">
                       <div class="destination-line">
@@ -965,7 +938,7 @@ onMounted(() => {
                 <input v-model="editorForm.name" type="text" required />
               </label>
               <label>
-                <span>届别 <em class="required-hint">(必填)</em></span>
+                <span>年级 <em class="required-hint">(必填)</em></span>
                 <input v-model="editorForm.cohort" type="text" required />
               </label>
             </div>
