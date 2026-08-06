@@ -199,52 +199,34 @@ export function createMemberApi({ baseUrl, storage, fetchImpl = fetch }: MemberA
       })
     },
 
-    async uploadPhoto(memberId: string, file: File): Promise<{ photo: string; originalSize: number; compressedSize: number; saved: boolean }> {
+    /**
+     * 上传头像/背景图到临时暂存目录，不写库。
+     * 返回的 photo 为 `/uploads/students/_temp/...` 临时 URL，
+     * 需在保存成员时随表单提交，由后端移动到最终路径。
+     */
+    uploadTempPhoto(file: File, kind: 'avatar' | 'cover'): Promise<{ photo: string; originalSize: number; compressedSize: number; saved: boolean }> {
       if (!normalizedBaseUrl) {
-        throw new Error('VITE_API_BASE_URL is not configured')
+        return Promise.reject(new Error('VITE_API_BASE_URL is not configured'))
       }
 
       const formData = new FormData()
       formData.append('photo', file)
+      formData.append('kind', kind)
 
-      const response = await fetchImpl(`${normalizedBaseUrl}/students/${encodeURIComponent(memberId)}/photo`, {
+      return fetchImpl(`${normalizedBaseUrl}/students/temp-photo`, {
         method: 'POST',
         headers: {
           Authorization: storage.getToken() ? `Bearer ${storage.getToken()}` : '',
         },
         body: formData,
+      }).then((response) => {
+        if (!response.ok) {
+          return response.json().catch(() => ({ error: 'Upload failed' })).then((error) => {
+            throw new Error(error.error || `Upload failed with ${response.status}`)
+          })
+        }
+        return response.json()
       })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Upload failed' }))
-        throw new Error(error.error || `Upload failed with ${response.status}`)
-      }
-
-      return response.json()
-    },
-
-    async uploadCoverPhoto(memberId: string, file: File): Promise<{ photo: string; originalSize: number; compressedSize: number; saved: boolean }> {
-      if (!normalizedBaseUrl) {
-        throw new Error('VITE_API_BASE_URL is not configured')
-      }
-
-      const formData = new FormData()
-      formData.append('photo', file)
-
-      const response = await fetchImpl(`${normalizedBaseUrl}/students/${encodeURIComponent(memberId)}/cover-photo`, {
-        method: 'POST',
-        headers: {
-          Authorization: storage.getToken() ? `Bearer ${storage.getToken()}` : '',
-        },
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Upload failed' }))
-        throw new Error(error.error || `Upload failed with ${response.status}`)
-      }
-
-      return response.json()
     },
 
     // 专利相关API

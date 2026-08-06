@@ -80,6 +80,15 @@ export async function ensureDirectory(dirPath: string): Promise<void> {
   await fs.mkdir(dirPath, { recursive: true })
 }
 
+/**
+ * 清空并重建照片暂存目录，用于服务启动时清理上次运行残留的未提交临时文件。
+ */
+export async function cleanupStagingDir(uploadDir: string): Promise<void> {
+  const stagingDir = path.join(uploadDir, '_temp')
+  await fs.rm(stagingDir, { recursive: true, force: true })
+  await ensureDirectory(stagingDir)
+}
+
 export function generatePhotoPath(cohort: string, studentId: string, prefix = 'photo'): string {
   const filename = `${studentId}-${prefix}.jpg`
   return path.join(cohort, filename)

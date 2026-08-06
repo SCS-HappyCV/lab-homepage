@@ -451,14 +451,6 @@ function closeEditor() {
   editorError.value = ''
 }
 
-function handlePhotoUploadSuccess(photo: string) {
-  editorForm.value.photo = photo
-}
-
-function handleCoverPhotoUploadSuccess(photo: string) {
-  editorForm.value.coverPhoto = photo
-}
-
 function handlePhotoUploadError(error: string) {
   editorError.value = error
 }
@@ -908,26 +900,22 @@ onMounted(() => {
           </div>
 
           <div class="editor-body">
-            <div v-if="editorMode === 'edit'" class="editor-photo-section">
+            <div class="editor-photo-section">
               <span class="editor-section-label">成员头像</span>
               <PhotoUploader
                 v-model="editorForm.photo"
-                :member-id="editorForm.id"
                 :member-name="editorForm.name"
                 mode="avatar"
-                @upload-success="handlePhotoUploadSuccess"
                 @upload-error="handlePhotoUploadError"
               />
             </div>
 
-            <div v-if="editorMode === 'edit'" class="editor-photo-section">
+            <div class="editor-photo-section">
               <span class="editor-section-label">背景图片</span>
               <PhotoUploader
                 v-model="editorForm.coverPhoto"
-                :member-id="editorForm.id"
                 :member-name="editorForm.name"
                 mode="cover"
-                @upload-success="handleCoverPhotoUploadSuccess"
                 @upload-error="handlePhotoUploadError"
               />
             </div>

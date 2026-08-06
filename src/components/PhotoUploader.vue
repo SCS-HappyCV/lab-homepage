@@ -2,18 +2,17 @@
 import { ref, computed, watch } from 'vue'
 import { Upload, X, ImageIcon } from 'lucide-vue-next'
 import { resolvePhotoUrl } from '../utils/publicAsset'
+import { memberApi } from '../utils/api'
 import ImageCropper from './ImageCropper.vue'
 
 interface Props {
   modelValue?: string
-  memberId: string
   memberName: string
   mode?: 'avatar' | 'cover'
 }
 
 interface Emits {
   (e: 'update:modelValue', value: string): void
-  (e: 'upload-success', photo: string): void
   (e: 'upload-error', error: string): void
 }
 
@@ -110,29 +109,21 @@ async function uploadCroppedFile(file: File) {
   isUploading.value = true
   uploadProgress.value = 0
 
-  try {
-    // 模拟进度
-    const progressInterval = setInterval(() => {
-      if (uploadProgress.value < 90) {
-        uploadProgress.value += 10
-      }
-    }, 100)
-
-    const { memberApi } = await import('../utils/api')
-
-    let result: { photo: string }
-    if (props.mode === 'cover') {
-      result = await memberApi.uploadCoverPhoto(props.memberId, file)
-    } else {
-      result = await memberApi.uploadPhoto(props.memberId, file)
+  // 模拟进度
+  const progressInterval = setInterval(() => {
+    if (uploadProgress.value < 90) {
+      uploadProgress.value += 10
     }
+  }, 100)
 
-    clearInterval(progressInterval)
+  try {
+    // 上传到临时暂存目录，保存成员时由后端移动到最终路径
+    const result = await memberApi.uploadTempPhoto(file, props.mode)
+
     uploadProgress.value = 100
 
     previewUrl.value = result.photo
     emit('update:modelValue', result.photo)
-    emit('upload-success', result.photo)
 
     setTimeout(() => {
       uploadProgress.value = 0
@@ -141,6 +132,7 @@ async function uploadCroppedFile(file: File) {
     errorMessage.value = error instanceof Error ? error.message : '上传失败'
     emit('upload-error', errorMessage.value)
   } finally {
+    clearInterval(progressInterval)
     isUploading.value = false
   }
 }

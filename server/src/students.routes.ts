@@ -1,7 +1,9 @@
 import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import multer from 'multer'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { requireAdmin, type AuthService } from './auth.js'
 import { StudentValidationError, type StudentRepository } from './students.repo.js'
 import type { StudentRecord } from './types.js'
@@ -21,16 +23,21 @@ const ALLOWED_MIME_TYPES = new Set([
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
+const TEMP_URL_PREFIX = '/uploads/students/_temp/'
+const STAGING_DIRNAME = '_temp'
+type PhotoKind = 'avatar' | 'cover'
+
 export function createStudentRouter({ repo, authService, uploadDir }: StudentRouterDeps) {
   const router = Router()
   const adminOnly = requireAdmin(authService)
+  const stagingDir = path.join(uploadDir, STAGING_DIRNAME)
 
-  // 配置 multer
+  // 配置 multer：原始上传文件先落到暂存目录，压缩后再移动到最终路径
   const storage = multer.diskStorage({
     destination: async (_req, _file, cb) => {
       try {
-        await ensureDirectory(uploadDir)
-        cb(null, uploadDir)
+        await ensureDirectory(stagingDir)
+        cb(null, stagingDir)
       } catch (error) {
         cb(error as Error, '')
       }
@@ -39,7 +46,7 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
       const ext = path.extname(file.originalname).toLowerCase() || '.jpg'
       const timestamp = Date.now()
       const random = Math.random().toString(16).slice(2, 8)
-      cb(null, `temp-${timestamp}-${random}${ext}`)
+      cb(null, `raw-${timestamp}-${random}${ext}`)
     },
   })
 
@@ -61,25 +68,108 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
     res.json(repo.list())
   })
 
-  router.post('/students', adminOnly, (req, res) => {
+  // 临时上传：仅压缩并存入暂存目录，不写库；保存成员时再移动到最终路径
+  router.post('/students/temp-photo', adminOnly, upload.single('photo'), async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: '请选择要上传的照片' })
+      return
+    }
+
+    const kind = parsePhotoKind(req.body?.kind)
+    if (!kind) {
+      await fs.unlink(req.file.path).catch(() => {})
+      res.status(400).json({ error: '无效的图片类型' })
+      return
+    }
+
+    const token = crypto.randomBytes(16).toString('hex')
+    const filename = `${token}-${kind}.jpg`
+    const finalPath = path.join(stagingDir, filename)
+
     try {
-      const created = repo.create(withDefaults(req.body))
-      res.status(201).json(created)
+      const result = await compressImage(req.file.path, finalPath)
+      await fs.unlink(req.file.path).catch(() => {})
+
+      const photoUrl = `${TEMP_URL_PREFIX}${filename}`
+      res.json({
+        photo: photoUrl,
+        originalSize: result.originalSize,
+        compressedSize: result.compressedSize,
+        saved: result.saved,
+      })
+    } catch (error) {
+      await fs.unlink(req.file.path).catch(() => {})
+      await fs.unlink(finalPath).catch(() => {})
+      console.error('Temp photo upload error:', error)
+      res.status(500).json({ error: '照片上传失败' })
+    }
+  })
+
+  router.post('/students', adminOnly, async (req, res) => {
+    try {
+      const incoming = withDefaults(req.body)
+      // 先落库以触发校验与唯一性约束，通过后再把暂存文件移动到最终路径
+      const created = repo.create(incoming)
+
+      try {
+        const avatar = await commitPhotoField(created.photo ?? '', undefined, 'avatar', created.cohort, created.id, uploadDir)
+        const cover = await commitPhotoField(created.coverPhoto ?? '', undefined, 'cover', created.cohort, created.id, uploadDir)
+
+        let finalRecord = created
+        if (avatar.finalUrl !== (created.photo ?? '') || cover.finalUrl !== (created.coverPhoto ?? '')) {
+          finalRecord = repo.update(created.id, { ...created, photo: avatar.finalUrl, coverPhoto: cover.finalUrl }) ?? created
+        }
+
+        res.status(201).json(finalRecord)
+      } catch (commitError) {
+        // 文件移动或二次写库失败：回滚刚创建的记录，清理已移动的最终文件
+        repo.delete(created.id)
+        console.error('Student photo commit error:', commitError)
+        res.status(500).json({ error: '保存成员图片失败' })
+      }
     } catch (error) {
       handleWriteError(error, res)
     }
   })
 
-  router.put('/students/:id', adminOnly, (req, res) => {
+  router.put('/students/:id', adminOnly, async (req, res) => {
     const id = String(req.params.id)
+    const existing = repo.get(id)
+    if (!existing) {
+      res.status(404).json({ error: 'Student not found' })
+      return
+    }
+
     try {
-      const updated = repo.update(id, withDefaults(req.body, id))
-      if (!updated) {
+      const incoming = withDefaults(req.body, id)
+      // 先写库（触发校验），通过后再提交图片文件
+      const saved = repo.update(id, incoming)
+      if (!saved) {
         res.status(404).json({ error: 'Student not found' })
         return
       }
 
-      res.json(updated)
+      try {
+        const avatar = await commitPhotoField(saved.photo ?? '', existing.photo, 'avatar', saved.cohort, id, uploadDir)
+        const cover = await commitPhotoField(saved.coverPhoto ?? '', existing.coverPhoto, 'cover', saved.cohort, id, uploadDir)
+
+        let finalSaved = saved
+        if (avatar.finalUrl !== (saved.photo ?? '') || cover.finalUrl !== (saved.coverPhoto ?? '')) {
+          finalSaved = repo.update(id, { ...saved, photo: avatar.finalUrl, coverPhoto: cover.finalUrl }) ?? saved
+        }
+
+        // 数据库更新成功后，清理被替换/移除的旧图片文件
+        await Promise.all(
+          [...avatar.staleUrls, ...cover.staleUrls].map((url) => deleteUploadedPhoto(url, uploadDir)),
+        )
+
+        res.json(finalSaved)
+      } catch (commitError) {
+        // 文件移动或二次写库失败：回滚到编辑前的数据，避免记录指向不存在的临时文件
+        repo.update(id, existing)
+        console.error('Student photo commit error:', commitError)
+        res.status(500).json({ error: '保存成员图片失败' })
+      }
     } catch (error) {
       handleWriteError(error, res)
     }
@@ -95,141 +185,62 @@ export function createStudentRouter({ repo, authService, uploadDir }: StudentRou
     res.status(204).send()
   })
 
-  // 照片上传接口（头像）
-  router.post('/students/:id/photo', adminOnly, upload.single('photo'), async (req, res) => {
-    const id = String(req.params.id)
-
-    if (!req.file) {
-      res.status(400).json({ error: '请选择要上传的照片' })
-      return
-    }
-
-    try {
-      // 获取学生信息
-      const student = repo.get(id)
-      if (!student) {
-        res.status(404).json({ error: 'Student not found' })
-        return
-      }
-
-      // 记录旧照片路径，用于后续清理
-      const oldPhotoUrl = student.photo
-
-      // 生成最终文件路径
-      const relativePath = generatePhotoPath(student.cohort, id, 'avatar')
-      const finalDir = path.join(uploadDir, student.cohort)
-      const finalPath = path.join(uploadDir, relativePath)
-
-      // 确保目录存在
-      await ensureDirectory(finalDir)
-
-      // 压缩图片
-      const result = await compressImage(req.file.path, finalPath)
-
-      // 删除临时文件
-      const fs = await import('node:fs/promises')
-      await fs.unlink(req.file.path).catch(() => {})
-
-      // 更新学生的 photo 字段
-      const photoUrl = `/uploads/students/${relativePath.replace(/\\/g, '/')}`
-      const updated = repo.update(id, { ...student, photo: photoUrl })
-
-      // 上传成功后，删除旧照片文件（如果路径与新照片不同）
-      if (updated && oldPhotoUrl && oldPhotoUrl !== photoUrl) {
-        await deleteUploadedPhoto(oldPhotoUrl, uploadDir)
-      }
-
-      if (!updated) {
-        res.status(500).json({ error: '更新学生照片失败' })
-        return
-      }
-
-      res.json({
-        photo: photoUrl,
-        originalSize: result.originalSize,
-        compressedSize: result.compressedSize,
-        saved: result.saved,
-      })
-    } catch (error) {
-      // 清理临时文件
-      const fs = await import('node:fs/promises')
-      await fs.unlink(req.file.path).catch(() => {})
-
-      if (error instanceof multer.MulterError) {
-        if (error.code === 'LIMIT_FILE_SIZE') {
-          res.status(400).json({ error: '文件大小超过限制（最大 5MB）' })
-          return
-        }
-      }
-
-      console.error('Photo upload error:', error)
-      res.status(500).json({ error: '照片上传失败' })
-    }
-  })
-
-  // 背景图上传接口
-  router.post('/students/:id/cover-photo', adminOnly, upload.single('photo'), async (req, res) => {
-    const id = String(req.params.id)
-
-    if (!req.file) {
-      res.status(400).json({ error: '请选择要上传的照片' })
-      return
-    }
-
-    try {
-      const student = repo.get(id)
-      if (!student) {
-        res.status(404).json({ error: 'Student not found' })
-        return
-      }
-
-      const oldCoverUrl = student.coverPhoto
-
-      const relativePath = generatePhotoPath(student.cohort, id, 'cover')
-      const finalDir = path.join(uploadDir, student.cohort)
-      const finalPath = path.join(uploadDir, relativePath)
-
-      await ensureDirectory(finalDir)
-      const result = await compressImage(req.file.path, finalPath)
-
-      const fs = await import('node:fs/promises')
-      await fs.unlink(req.file.path).catch(() => {})
-
-      const photoUrl = `/uploads/students/${relativePath.replace(/\\/g, '/')}`
-      const updated = repo.update(id, { ...student, coverPhoto: photoUrl })
-
-      if (updated && oldCoverUrl && oldCoverUrl !== photoUrl) {
-        await deleteUploadedPhoto(oldCoverUrl, uploadDir)
-      }
-
-      if (!updated) {
-        res.status(500).json({ error: '更新背景图失败' })
-        return
-      }
-
-      res.json({
-        photo: photoUrl,
-        originalSize: result.originalSize,
-        compressedSize: result.compressedSize,
-        saved: result.saved,
-      })
-    } catch (error) {
-      const fs = await import('node:fs/promises')
-      await fs.unlink(req.file.path).catch(() => {})
-
-      if (error instanceof multer.MulterError) {
-        if (error.code === 'LIMIT_FILE_SIZE') {
-          res.status(400).json({ error: '文件大小超过限制（最大 5MB）' })
-          return
-        }
-      }
-
-      console.error('Cover photo upload error:', error)
-      res.status(500).json({ error: '背景图上传失败' })
-    }
-  })
+  // 集中处理 multer 中间件抛出的上传错误（文件超限、类型不支持等）
+  router.use(handleUploadError)
 
   return router
+}
+
+function parsePhotoKind(value: unknown): PhotoKind | null {
+  return value === 'avatar' || value === 'cover' ? value : null
+}
+
+interface PhotoCommit {
+  finalUrl: string
+  staleUrls: string[]
+}
+
+/**
+ * 将单个图片字段提交到最终位置：
+ * - 若新值是暂存 URL，把暂存文件移动到 <cohort>/<id>-<kind>.jpg 并返回最终 URL；
+ * - 否则原值透传（空串表示移除、外链保持不变）；
+ * - 收集需要在数据库写入成功后删除的旧文件 URL（与新值不同的旧地址）。
+ */
+async function commitPhotoField(
+  newUrl: string,
+  oldUrl: string | undefined,
+  kind: PhotoKind,
+  cohort: string,
+  id: string,
+  uploadDir: string,
+): Promise<PhotoCommit> {
+  if (newUrl.startsWith(TEMP_URL_PREFIX)) {
+    const tempPath = resolveUploadedPhotoPath(newUrl, uploadDir)
+    if (tempPath) {
+      const relativePath = generatePhotoPath(cohort, id, kind)
+      const finalPath = path.join(uploadDir, relativePath)
+      await ensureDirectory(path.dirname(finalPath))
+      await moveFile(tempPath, finalPath)
+      const finalUrl = `/uploads/students/${relativePath.replace(/\\/g, '/')}`
+      return { finalUrl, staleUrls: collectStale(oldUrl, finalUrl) }
+    }
+  }
+
+  return { finalUrl: newUrl, staleUrls: collectStale(oldUrl, newUrl) }
+}
+
+function collectStale(oldUrl: string | undefined, newUrl: string): string[] {
+  return oldUrl && oldUrl !== newUrl ? [oldUrl] : []
+}
+
+async function moveFile(src: string, dest: string): Promise<void> {
+  try {
+    await fs.rename(src, dest)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error
+    await fs.copyFile(src, dest)
+    await fs.unlink(src)
+  }
 }
 
 function resolveUploadedPhotoPath(photoUrl: string, uploadDir: string): string | null {
@@ -289,7 +300,7 @@ function normalizeStatus(value: unknown): StudentRecord['status'] {
   return value as StudentRecord['status']
 }
 
-function handleWriteError(error: unknown, res: import('express').Response) {
+function handleWriteError(error: unknown, res: Response): void {
   if (error instanceof StudentValidationError) {
     res.status(400).json({ error: error.message })
     return
@@ -300,5 +311,22 @@ function handleWriteError(error: unknown, res: import('express').Response) {
     return
   }
 
-  throw error
+  console.error('Student write error:', error)
+  if (!res.headersSent) {
+    res.status(500).json({ error: '保存失败' })
+  }
+}
+
+function handleUploadError(error: unknown, _req: Request, res: Response, next: NextFunction): void {
+  if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+    res.status(400).json({ error: '文件大小超过限制（最大 5MB）' })
+    return
+  }
+
+  if (error instanceof Error && error.message.includes('不支持的文件类型')) {
+    res.status(400).json({ error: error.message })
+    return
+  }
+
+  next(error)
 }

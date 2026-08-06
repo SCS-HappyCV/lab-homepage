@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
@@ -119,7 +119,51 @@ async function createTestPhoto(directory: string, filename: string, background: 
   return filePath
 }
 
-test('photo upload uses fixed filename and deletes previous uploaded file', async () => {
+test('temp photo upload stages file without writing database, then save commits it', async () => {
+  const testUploadDir = mkdtempSync(join(tmpdir(), 'student-uploads-'))
+  const app = createApp({ config: { ...config(), uploadDir: testUploadDir } })
+  const photoTempDir = mkdtempSync(join(tmpdir(), 'student-photos-'))
+
+  try {
+    await withTestAgent(app, async (request) => {
+      const token = (await request.post('/auth/login').send({ password: 'secret-passphrase' }).expect(200)).body.token
+
+      const photoPath = await createTestPhoto(photoTempDir, 'first.jpg', { r: 255, g: 0, b: 0 })
+
+      // 临时上传：返回 _temp 路径，数据库中尚无任何学生/照片字段
+      const tempResponse = await request
+        .post('/students/temp-photo')
+        .set('Authorization', `Bearer ${token}`)
+        .field('kind', 'avatar')
+        .attach('photo', photoPath)
+        .expect(200)
+
+      const tempUrl: string = tempResponse.body.photo
+      assert.match(tempUrl, /^\/uploads\/students\/_temp\/[0-9a-f]+-avatar\.jpg$/)
+      const tempDiskPath = join(testUploadDir, '_temp', tempUrl.split('/').pop()!)
+      assert.ok(existsSync(tempDiskPath), 'staged file should exist')
+
+      assert.equal((await request.get('/students')).body.length, 0, 'temp upload must not create a student')
+
+      // 新建成员并携带临时 URL：保存后移动到最终固定路径，临时文件消失
+      const finalDiskPath = join(testUploadDir, '2026', '2026-li-si-avatar.jpg')
+      const created = await request
+        .post('/students')
+        .set('Authorization', `Bearer ${token}`)
+        .send(sampleStudent({ photo: tempUrl }))
+        .expect(201)
+
+      assert.equal(created.body.photo, '/uploads/students/2026/2026-li-si-avatar.jpg')
+      assert.ok(existsSync(finalDiskPath), 'final avatar file should exist')
+      assert.ok(!existsSync(tempDiskPath), 'staged file should be removed after commit')
+    })
+  } finally {
+    rmSync(testUploadDir, { recursive: true, force: true })
+    rmSync(photoTempDir, { recursive: true, force: true })
+  }
+})
+
+test('saving a member replaces staged photo and deletes the previous file', async () => {
   const testUploadDir = mkdtempSync(join(tmpdir(), 'student-uploads-'))
   const app = createApp({ config: { ...config(), uploadDir: testUploadDir } })
   const photoTempDir = mkdtempSync(join(tmpdir(), 'student-photos-'))
@@ -130,45 +174,97 @@ test('photo upload uses fixed filename and deletes previous uploaded file', asyn
 
       await request.post('/students').set('Authorization', `Bearer ${token}`).send(sampleStudent()).expect(201)
 
-      const firstPhoto = await createTestPhoto(photoTempDir, 'first.jpg', { r: 255, g: 0, b: 0 })
-      const secondPhoto = await createTestPhoto(photoTempDir, 'second.jpg', { r: 0, g: 255, b: 0 })
-
-      const fixedDiskPath = join(testUploadDir, '2026', '2026-li-si-avatar.jpg')
-
-      // 第一次上传
-      const firstResponse = await request
-        .post('/students/2026-li-si/photo')
-        .set('Authorization', `Bearer ${token}`)
-        .attach('photo', firstPhoto)
-        .expect(200)
-
-      assert.equal(firstResponse.body.photo, '/uploads/students/2026/2026-li-si-avatar.jpg')
-      assert.ok(existsSync(fixedDiskPath), 'fixed-path avatar file should exist')
-
-      // 模拟历史 timestamp 文件名旧照片
-      const oldRelativePath = '2026/2026-li-si-avatar-1234567890.jpg'
+      // 先给成员配上一张旧头像（模拟历史 timestamp 命名文件，与最终固定路径不同）
+      const oldRelativePath = '2026/2026-li-si-avatar-old.jpg'
       const oldDiskPath = join(testUploadDir, oldRelativePath)
+      mkdirSync(join(testUploadDir, '2026'), { recursive: true })
       writeFileSync(oldDiskPath, Buffer.from('old photo'))
-
       await request
         .put('/students/2026-li-si')
         .set('Authorization', `Bearer ${token}`)
         .send(sampleStudent({ photo: `/uploads/students/${oldRelativePath.replace(/\\/g, '/')}` }))
         .expect(200)
 
-      // 第二次上传应覆盖固定路径文件并删除旧 timestamp 文件
-      const secondResponse = await request
-        .post('/students/2026-li-si/photo')
+      // 上传新的临时头像
+      const newPhotoPath = await createTestPhoto(photoTempDir, 'new.jpg', { r: 0, g: 255, b: 0 })
+      const tempResponse = await request
+        .post('/students/temp-photo')
         .set('Authorization', `Bearer ${token}`)
-        .attach('photo', secondPhoto)
+        .field('kind', 'avatar')
+        .attach('photo', newPhotoPath)
         .expect(200)
 
-      assert.equal(secondResponse.body.photo, '/uploads/students/2026/2026-li-si-avatar.jpg')
-      assert.ok(existsSync(fixedDiskPath), 'new avatar file should still exist at fixed path')
-      assert.ok(!existsSync(oldDiskPath), 'old timestamp-named photo file should be deleted')
+      // 保存替换：固定路径最终文件存在，旧 timestamp 文件被删除
+      const updated = await request
+        .put('/students/2026-li-si')
+        .set('Authorization', `Bearer ${token}`)
+        .send(sampleStudent({ photo: tempResponse.body.photo }))
+        .expect(200)
+
+      assert.equal(updated.body.photo, '/uploads/students/2026/2026-li-si-avatar.jpg')
+      assert.ok(existsSync(join(testUploadDir, '2026', '2026-li-si-avatar.jpg')), 'final avatar should exist')
+      assert.ok(!existsSync(oldDiskPath), 'previous avatar file should be deleted')
     })
   } finally {
     rmSync(testUploadDir, { recursive: true, force: true })
     rmSync(photoTempDir, { recursive: true, force: true })
+  }
+})
+
+test('saving with an empty photo field removes the previous file from disk', async () => {
+  const testUploadDir = mkdtempSync(join(tmpdir(), 'student-uploads-'))
+  const app = createApp({ config: { ...config(), uploadDir: testUploadDir } })
+
+  try {
+    await withTestAgent(app, async (request) => {
+      const token = (await request.post('/auth/login').send({ password: 'secret-passphrase' }).expect(200)).body.token
+
+      await request.post('/students').set('Authorization', `Bearer ${token}`).send(sampleStudent()).expect(201)
+
+      const oldRelativePath = '2026/2026-li-si-avatar.jpg'
+      const oldDiskPath = join(testUploadDir, oldRelativePath)
+      mkdirSync(join(testUploadDir, '2026'), { recursive: true })
+      writeFileSync(oldDiskPath, Buffer.from('old photo'))
+      await request
+        .put('/students/2026-li-si')
+        .set('Authorization', `Bearer ${token}`)
+        .send(sampleStudent({ photo: `/uploads/students/${oldRelativePath.replace(/\\/g, '/')}` }))
+        .expect(200)
+
+      // 移除头像：保存空 photo 字段，旧文件应被删除
+      const updated = await request
+        .put('/students/2026-li-si')
+        .set('Authorization', `Bearer ${token}`)
+        .send(sampleStudent({ photo: '' }))
+        .expect(200)
+
+      assert.equal(updated.body.photo ?? '', '')
+      assert.ok(!existsSync(oldDiskPath), 'removed avatar file should be deleted from disk')
+    })
+  } finally {
+    rmSync(testUploadDir, { recursive: true, force: true })
+  }
+})
+
+test('temp photo upload rejects files larger than 5MB via error middleware', async () => {
+  const testUploadDir = mkdtempSync(join(tmpdir(), 'student-uploads-'))
+  const app = createApp({ config: { ...config(), uploadDir: testUploadDir } })
+
+  try {
+    await withTestAgent(app, async (request) => {
+      const token = (await request.post('/auth/login').send({ password: 'secret-passphrase' }).expect(200)).body.token
+
+      const oversized = Buffer.alloc(6 * 1024 * 1024, 0)
+      const response = await request
+        .post('/students/temp-photo')
+        .set('Authorization', `Bearer ${token}`)
+        .field('kind', 'avatar')
+        .attach('photo', oversized, { filename: 'big.jpg', contentType: 'image/jpeg' })
+
+      assert.equal(response.status, 400)
+      assert.match(String(response.body.error), /文件大小超过限制/)
+    })
+  } finally {
+    rmSync(testUploadDir, { recursive: true, force: true })
   }
 })
