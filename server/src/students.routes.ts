@@ -282,6 +282,7 @@ function withDefaults(input: Partial<StudentRecord>, forcedId?: string): Student
     photo: String(input.photo ?? ''),
     coverPhoto: String(input.coverPhoto ?? ''),
     destination: String(input.destination ?? ''),
+    advisor: normalizeAdvisor(input.advisor),
     bio: String(input.bio ?? ''),
     achievements: asStringArray(input.achievements),
     experiences: asStringArray(input.experiences),
@@ -293,6 +294,11 @@ function withDefaults(input: Partial<StudentRecord>, forcedId?: string): Student
 
 function asStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+}
+
+function normalizeAdvisor(value: unknown): string {
+  if (typeof value === 'string' && value.trim()) return value.trim()
+  return '周维'
 }
 
 function normalizeStatus(value: unknown): StudentRecord['status'] {

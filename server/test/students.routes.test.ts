@@ -36,6 +36,7 @@ function sampleStudent(overrides: Partial<StudentRecord> = {}): StudentRecord {
     nativePlace: '',
     photo: '',
     destination: '',
+    advisor: '周维',
     bio: 'Researches vision.',
     achievements: [],
     experiences: [],

@@ -15,6 +15,7 @@ export interface StudentRecord {
   photo?: string
   coverPhoto?: string
   destination?: string
+  advisor: string
   bio: string
   achievements: string[]
   experiences: string[]

@@ -23,6 +23,7 @@ interface StudentRow {
   photo: string | null
   coverPhoto: string | null
   destination: string | null
+  advisor: string
   bio: string
   achievements: string
   experiences: string
@@ -70,6 +71,7 @@ function main() {
       photo: row.photo ?? undefined,
       coverPhoto: row.coverPhoto ?? undefined,
       destination: row.destination ?? undefined,
+      advisor: row.advisor || '周维',
       bio: row.bio,
       research: safeParseJsonArray(row.research),
       achievements: safeParseJsonArray(row.achievements),

@@ -53,9 +53,9 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
       db.prepare(
         `INSERT INTO students (
           id, name, cohort, degree, status, research, email, phone, wechat,
-          nativePlace, birthDate, photo, coverPhoto, destination, bio, achievements, experiences,
+          nativePlace, birthDate, photo, coverPhoto, destination, advisor, bio, achievements, experiences,
           sortOrder, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         row.id,
         row.name,
@@ -71,6 +71,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         row.photo ?? '',
         row.coverPhoto ?? '',
         row.destination ?? '',
+        row.advisor,
         row.bio,
         row.achievements,
         row.experiences,
@@ -92,7 +93,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         `UPDATE students SET
           name = ?, cohort = ?, degree = ?, status = ?, research = ?,
           email = ?, phone = ?, wechat = ?, nativePlace = ?, birthDate = ?, photo = ?,
-          coverPhoto = ?, destination = ?, bio = ?, achievements = ?, experiences = ?,
+          coverPhoto = ?, destination = ?, advisor = ?, bio = ?, achievements = ?, experiences = ?,
           sortOrder = ?, createdAt = ?, updatedAt = ?
         WHERE id = ?`,
       ).run(
@@ -109,6 +110,7 @@ export function createStudentRepository(db: AppDatabase): StudentRepository {
         row.photo ?? '',
         row.coverPhoto ?? '',
         row.destination ?? '',
+        row.advisor,
         row.bio,
         row.achievements,
         row.experiences,
@@ -159,6 +161,7 @@ function normalizeStudent(student: StudentRecord): StudentRecord {
     photo: normalizeOptionalString(student.photo),
     coverPhoto: normalizeOptionalString(student.coverPhoto),
     destination: normalizeOptionalString(student.destination),
+    advisor: typeof student.advisor === 'string' && student.advisor.trim() ? student.advisor.trim() : '周维',
     research: normalizeArray(student.research),
     achievements: normalizeArray(student.achievements),
     experiences: normalizeArray(student.experiences),
