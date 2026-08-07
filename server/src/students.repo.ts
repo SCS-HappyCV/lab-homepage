@@ -161,7 +161,7 @@ function normalizeStudent(student: StudentRecord): StudentRecord {
     photo: normalizeOptionalString(student.photo),
     coverPhoto: normalizeOptionalString(student.coverPhoto),
     destination: normalizeOptionalString(student.destination),
-    advisor: typeof student.advisor === 'string' && student.advisor.trim() ? student.advisor.trim() : '周维',
+    advisor: typeof student.advisor === 'string' ? student.advisor.trim() : '',
     research: normalizeArray(student.research),
     achievements: normalizeArray(student.achievements),
     experiences: normalizeArray(student.experiences),

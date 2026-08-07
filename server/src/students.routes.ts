@@ -297,8 +297,8 @@ function asStringArray(value: unknown) {
 }
 
 function normalizeAdvisor(value: unknown): string {
-  if (typeof value === 'string' && value.trim()) return value.trim()
-  return '周维'
+  if (typeof value === 'string') return value.trim()
+  return ''
 }
 
 function normalizeStatus(value: unknown): StudentRecord['status'] {

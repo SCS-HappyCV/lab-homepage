@@ -79,14 +79,14 @@ test('repository returns null when updating an unknown student', () => {
   assert.equal(repo.update('missing', sampleStudent({ id: 'missing' })), null)
 })
 
-test('repository defaults advisor to 周维 when missing or blank', () => {
+test('repository stores empty advisor when missing or blank', () => {
   const repo = createTestRepo()
 
   const missing = repo.create(sampleStudent({ id: '2026-missing', advisor: undefined as unknown as string }))
-  assert.equal(missing.advisor, '周维')
+  assert.equal(missing.advisor, '')
 
   const blank = repo.create(sampleStudent({ id: '2026-blank', advisor: '   ' }))
-  assert.equal(blank.advisor, '周维')
+  assert.equal(blank.advisor, '')
 })
 
 test('repository persists an explicitly provided advisor', () => {

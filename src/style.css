@@ -990,6 +990,14 @@ h3 {
   gap: 8px;
 }
 
+.advisor-row {
+  grid-template-columns: repeat(3, minmax(max-content, 1fr));
+}
+
+.advisor-row .filter-pill {
+  white-space: nowrap;
+}
+
 .filter-pill-flex {
   display: flex;
   flex-wrap: wrap;
@@ -1838,10 +1846,17 @@ h3 {
   margin: 0;
 }
 
+.modal-native-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+}
+
 .modal-native {
   color: var(--ink);
   font-size: 17px;
-  margin-top: 12px;
 }
 
 .modal-degree-row {
@@ -1863,6 +1878,16 @@ h3 {
   gap: 9px;
   color: var(--ink);
   font-size: 17px;
+}
+
+.modal-advisor {
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.modal-advisor strong {
+  font-weight: 700;
 }
 
 /* --- 研究方向标签 --- */

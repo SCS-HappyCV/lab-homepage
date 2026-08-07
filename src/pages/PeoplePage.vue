@@ -36,6 +36,7 @@ type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experience
 
 const allCohorts = '全部'
 const allResearchDirections = '全部'
+const allAdvisors = '全部'
 
 // 研究方向按每行两个的固定顺序排列
 const researchDirectionKeywords = ['点云', '大模型', '高光谱', '变化检测', '目标检测', '语义分割']
@@ -51,6 +52,7 @@ const apiError = ref('')
 const isLoadingMembers = ref(false)
 const activeCohorts = ref<string[]>([allCohorts])
 const activeResearchDirections = ref<string[]>([allResearchDirections])
+const advisorFilter = ref(allAdvisors)
 const searchText = ref('')
 const statusFilter = ref<'全部' | 'current' | 'alumni'>('全部')
 const cohortSortAsc = ref(false)
@@ -296,10 +298,12 @@ const filteredMembers = computed(() => {
     const matchesResearchDirection =
       activeResearchDirections.value.includes(allResearchDirections) ||
       activeResearchDirections.value.some((dir) => member.research.some((item) => item.includes(dir)))
+    const matchesAdvisor = advisorFilter.value === allAdvisors || member.advisor === advisorFilter.value
     const text = [
       member.name,
       member.cohort,
       member.degree,
+      member.advisor,
       member.nativePlace,
       member.wechat,
       member.destination,
@@ -310,7 +314,13 @@ const filteredMembers = computed(() => {
       .join(' ')
       .toLowerCase()
 
-    return matchesStatus && matchesCohort && matchesResearchDirection && (!keyword || text.includes(keyword))
+    return (
+      matchesStatus &&
+      matchesCohort &&
+      matchesResearchDirection &&
+      matchesAdvisor &&
+      (!keyword || text.includes(keyword))
+    )
   })
 })
 
@@ -439,6 +449,7 @@ function openCreateEditor() {
 function openEditEditor(member: StudentProfile) {
   editorMode.value = 'edit'
   editorForm.value = toForm(member)
+  editorForm.value.advisor = ''
   parseNativePlace(member.nativePlace ?? '')
   parseDestination(member.destination ?? '')
   parseBirthDate(member.birthDate ?? '')
@@ -478,8 +489,11 @@ async function saveMember() {
     if (selectedMember.value?.id === payload.id) {
       selectedMember.value = members.value.find((member) => member.id === payload.id) ?? null
     }
-  } catch {
-    editorError.value = '保存失败，请确认后端服务可用且登录状态有效。'
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    editorError.value = message
+      ? `保存失败：${message}`
+      : '保存失败，请确认后端服务可用且登录状态有效。'
   } finally {
     isSavingMember.value = false
   }
@@ -504,6 +518,7 @@ function createEmptyForm(): MemberForm {
     cohort: '',
     degree: '',
     status: 'current',
+    advisor: '',
     researchText: '',
     email: '',
     phone: '',
@@ -544,6 +559,7 @@ function fromForm(form: MemberForm): StudentProfile {
     cohort: form.cohort.trim(),
     degree: form.degree.trim(),
     status: form.status,
+    advisor: form.advisor.trim(),
     research: lines(form.researchText),
     email: form.email.trim(),
     phone: form.phone?.trim(),
@@ -629,6 +645,21 @@ onMounted(() => {
           </div>
 
           <h3 class="filter-panel-title">筛选</h3>
+
+          <div class="filter-group">
+            <span class="filter-group-label">导师</span>
+            <div class="filter-pill-row advisor-row">
+              <button
+                v-for="advisor in [allAdvisors, '周维', '许海霞']"
+                :key="advisor"
+                type="button"
+                :class="['filter-pill', { active: advisorFilter === advisor }]"
+                @click="advisorFilter = advisor"
+              >
+                {{ advisor }}
+              </button>
+            </div>
+          </div>
 
           <div class="filter-group">
             <span class="filter-group-label">状态</span>
@@ -790,9 +821,12 @@ onMounted(() => {
                         <h2>{{ selectedMember.name }}</h2>
                         <span class="status-badge" :class="selectedMember.status">{{ statusLabel(selectedMember.status) }}</span>
                       </div>
-                      <p v-if="selectedMember.nativePlace" class="modal-native">
-                        {{ selectedMember.nativePlace }}
-                      </p>
+                      <div class="modal-native-row">
+                        <p v-if="selectedMember.nativePlace" class="modal-native">
+                          {{ selectedMember.nativePlace }}
+                        </p>
+                        <p v-if="selectedMember.advisor" class="modal-advisor"><strong>导师</strong>：{{ selectedMember.advisor }}</p>
+                      </div>
                       <div class="modal-degree-row">
                         <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}级</p>
                         <p v-if="isMember && selectedMember.birthDate" class="modal-birth">
@@ -945,6 +979,19 @@ onMounted(() => {
                   <option value="current">在读</option>
                   <option value="alumni">已毕业</option>
                 </select>
+              </label>
+            </div>
+            <div class="editor-grid">
+              <label>
+                <span>导师</span>
+                <select v-model="editorForm.advisor">
+                  <option value="">请选择</option>
+                  <option value="周维">周维</option>
+                  <option value="许海霞">许海霞</option>
+                </select>
+              </label>
+              <label>
+                <span>&nbsp;</span>
               </label>
             </div>
             <div class="editor-grid">
