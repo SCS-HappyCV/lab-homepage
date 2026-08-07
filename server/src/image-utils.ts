@@ -89,7 +89,13 @@ export async function cleanupStagingDir(uploadDir: string): Promise<void> {
   await ensureDirectory(stagingDir)
 }
 
-export function generatePhotoPath(cohort: string, studentId: string, prefix = 'photo'): string {
-  const filename = `${studentId}-${prefix}.jpg`
+/**
+ * 生成成员照片的最终存放相对路径。
+ * 文件名带时间戳后缀（<studentId>-<prefix>-<timestamp>.jpg），
+ * 使每次替换图片后 URL 都不同，从而绕过 Cloudflare 等 CDN 的缓存。
+ */
+export function generatePhotoPath(cohort: string, studentId: string, prefix = 'photo', timestamp?: number): string {
+  const suffix = timestamp ?? Date.now()
+  const filename = `${studentId}-${prefix}-${suffix}.jpg`
   return path.join(cohort, filename)
 }

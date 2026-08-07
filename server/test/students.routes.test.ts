@@ -146,15 +146,15 @@ test('temp photo upload stages file without writing database, then save commits 
 
       assert.equal((await request.get('/students')).body.length, 0, 'temp upload must not create a student')
 
-      // 新建成员并携带临时 URL：保存后移动到最终固定路径，临时文件消失
-      const finalDiskPath = join(testUploadDir, '2026', '2026-li-si-avatar.jpg')
+      // 新建成员并携带临时 URL：保存后移动到带时间戳的最终路径，临时文件消失
       const created = await request
         .post('/students')
         .set('Authorization', `Bearer ${token}`)
         .send(sampleStudent({ photo: tempUrl }))
         .expect(201)
 
-      assert.equal(created.body.photo, '/uploads/students/2026/2026-li-si-avatar.jpg')
+      assert.match(created.body.photo, /^\/uploads\/students\/2026\/2026-li-si-avatar-\d+\.jpg$/)
+      const finalDiskPath = join(testUploadDir, '2026', created.body.photo.split('/').pop()!)
       assert.ok(existsSync(finalDiskPath), 'final avatar file should exist')
       assert.ok(!existsSync(tempDiskPath), 'staged file should be removed after commit')
     })
@@ -195,15 +195,16 @@ test('saving a member replaces staged photo and deletes the previous file', asyn
         .attach('photo', newPhotoPath)
         .expect(200)
 
-      // 保存替换：固定路径最终文件存在，旧 timestamp 文件被删除
+      // 保存替换：生成新的带时间戳文件名，旧文件被删除
       const updated = await request
         .put('/students/2026-li-si')
         .set('Authorization', `Bearer ${token}`)
         .send(sampleStudent({ photo: tempResponse.body.photo }))
         .expect(200)
 
-      assert.equal(updated.body.photo, '/uploads/students/2026/2026-li-si-avatar.jpg')
-      assert.ok(existsSync(join(testUploadDir, '2026', '2026-li-si-avatar.jpg')), 'final avatar should exist')
+      assert.match(updated.body.photo, /^\/uploads\/students\/2026\/2026-li-si-avatar-\d+\.jpg$/)
+      const finalDiskPath = join(testUploadDir, '2026', updated.body.photo.split('/').pop()!)
+      assert.ok(existsSync(finalDiskPath), 'final avatar should exist')
       assert.ok(!existsSync(oldDiskPath), 'previous avatar file should be deleted')
     })
   } finally {

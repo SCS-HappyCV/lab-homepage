@@ -33,15 +33,12 @@ export function createApp(options: Partial<AppOptions> = {}) {
   app.use(express.json({ limit: '1mb' }))
 
   // 静态文件服务 - 照片访问
-  // 文件名固定（<id>-avatar.jpg / <id>-cover.jpg），替换图片时 URL 不变，
-  // 因此必须禁用边缘强缓存、强制每次回源校验 ETag/Last-Modified，
-  // 否则 Cloudflare 等 CDN 会一直返回替换前的旧图。
+  // 最终文件名带时间戳后缀（<id>-<kind>-<ts>.jpg），每次替换图片 URL 都会变化，
+  // 因此可以放心使用长缓存，CDN/浏览器命中缓存即拿到正确的当前版本。
   const uploadsBaseDir = path.dirname(config.uploadDir)
   app.use('/uploads', express.static(uploadsBaseDir, {
-    lastModified: true,
-    etag: true,
+    maxAge: '1h',
     setHeaders: (res) => {
-      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate')
       res.set('Access-Control-Allow-Origin', '*')
     },
   }))
