@@ -2521,7 +2521,7 @@ h3 {
 
 .gallery-hero {
   position: relative;
-  min-height: 560px;
+  min-height: 680px;
   overflow: hidden;
   color: #ffffff;
   isolation: isolate;
@@ -2596,10 +2596,15 @@ h3 {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 130px;
+  height: 240px;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(to bottom, rgba(251, 252, 251, 0), #fbfcfb);
+  background: linear-gradient(
+    to bottom,
+    rgba(251, 252, 251, 0) 0%,
+    rgba(251, 252, 251, 0.18) 55%,
+    rgba(251, 252, 251, 0.72) 100%
+  );
 }
 
 .gallery-hero-content {
@@ -2607,7 +2612,7 @@ h3 {
   flex-direction: column;
   justify-content: center;
   width: min(1180px, calc(100% - 80px));
-  min-height: 560px;
+  min-height: 680px;
   margin: 0 auto;
   padding-top: 72px;
 }
@@ -3054,7 +3059,7 @@ h3 {
 
   .gallery-hero,
   .gallery-hero-content {
-    min-height: 620px;
+    min-height: 640px;
   }
 
   .photo-lightbox {
