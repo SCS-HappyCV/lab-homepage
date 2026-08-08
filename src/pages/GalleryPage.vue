@@ -616,6 +616,34 @@ onUnmounted(() => {
 
             <div class="editor-body">
               <div class="editor-section">
+                <div class="editor-fields">
+                  <label class="editor-field">
+                    标题 *
+                    <input v-model="albumForm.title" type="text" required maxlength="100" />
+                  </label>
+                  <label class="editor-field">
+                    分类
+                    <select v-model="albumForm.category">
+                      <option v-for="c in ALBUM_CATEGORIES" :key="c" :value="c">{{ c }}</option>
+                    </select>
+                  </label>
+                  <label class="editor-field">
+                    地点
+                    <input
+                      v-model="albumForm.location"
+                      type="text"
+                      placeholder="如 湘潭大学"
+                      maxlength="100"
+                    />
+                  </label>
+                  <label class="editor-field">
+                    日期
+                    <DatePicker v-model="albumForm.date" />
+                  </label>
+                </div>
+              </div>
+
+              <div class="editor-section">
                 <div class="editor-fields album-cover-desc">
                   <label class="editor-field">
                     封面图片
@@ -646,37 +674,9 @@ onUnmounted(() => {
                     </div>
                   </label>
 
-                  <label class="editor-field">
+                  <label class="editor-field album-desc-field">
                     相册描述
                     <textarea v-model="albumForm.description" rows="9" maxlength="500"></textarea>
-                  </label>
-                </div>
-              </div>
-
-              <div class="editor-section">
-                <div class="editor-fields">
-                  <label class="editor-field">
-                    标题 *
-                    <input v-model="albumForm.title" type="text" required maxlength="100" />
-                  </label>
-                  <label class="editor-field">
-                    分类
-                    <select v-model="albumForm.category">
-                      <option v-for="c in ALBUM_CATEGORIES" :key="c" :value="c">{{ c }}</option>
-                    </select>
-                  </label>
-                  <label class="editor-field">
-                    地点
-                    <input
-                      v-model="albumForm.location"
-                      type="text"
-                      placeholder="如 湘潭大学"
-                      maxlength="100"
-                    />
-                  </label>
-                  <label class="editor-field">
-                    日期
-                    <DatePicker v-model="albumForm.date" />
                   </label>
                 </div>
               </div>
@@ -884,18 +884,15 @@ onUnmounted(() => {
 }
 
 .album-cover-desc {
-  grid-template-columns: minmax(0, 380px) minmax(0, 280px);
-  align-items: stretch;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  align-items: start;
 }
 
-.album-cover-desc > :last-child {
-  display: flex;
-  flex-direction: column;
-}
-
-.album-cover-desc > :last-child textarea {
-  flex: 1;
-  min-height: 180px;
+.album-desc-field textarea {
+  width: 100%;
+  height: 225px;
+  min-height: 225px;
+  resize: vertical;
 }
 
 .album-cover-field {
@@ -1585,8 +1582,9 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .album-cover-desc > :last-child textarea {
-    min-height: 120px;
+  .album-desc-field textarea {
+    height: 140px;
+    min-height: 140px;
   }
 }
 </style>
