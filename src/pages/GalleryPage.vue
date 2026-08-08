@@ -17,6 +17,7 @@ import {
   Save,
   Trash2,
   Upload,
+  AlertTriangle,
 } from 'lucide-vue-next'
 import { memberApi } from '../utils/api'
 import { resolvePhotoUrl } from '../utils/publicAsset'
@@ -69,6 +70,11 @@ const coverFileInput = ref<HTMLInputElement | null>(null)
 const selectedCoverName = ref('')
 let pendingCoverFile: File | null = null
 let pendingCoverObjectUrl = ''
+
+// 删除相册确认弹窗
+const isDeleteConfirmOpen = ref(false)
+const isDeletingAlbum = ref(false)
+const deleteTarget = ref<{ id: string; title: string } | null>(null)
 
 function createEmptyAlbumForm(): AlbumFormState {
   return {
@@ -198,18 +204,35 @@ async function saveAlbum() {
   }
 }
 
-async function deleteAlbum(album: { id: string; title: string }) {
-  if (!window.confirm(`确认删除相册「${album.title}」吗？该相册的全部照片将被一并删除。`)) return
+function requestDeleteAlbum(album: { id: string; title: string }) {
+  deleteTarget.value = { id: album.id, title: album.title }
+  isDeleteConfirmOpen.value = true
+}
+
+function cancelDeleteAlbum() {
+  if (isDeletingAlbum.value) return
+  isDeleteConfirmOpen.value = false
+  deleteTarget.value = null
+}
+
+async function confirmDeleteAlbum() {
+  const album = deleteTarget.value
+  if (!album || isDeletingAlbum.value) return
+  isDeletingAlbum.value = true
   try {
     await memberApi.deleteAlbum(album.id)
     if (selectedAlbum.value?.id === album.id) {
       selectedAlbum.value = null
       selectedPhoto.value = null
     }
+    isDeleteConfirmOpen.value = false
+    deleteTarget.value = null
     closeAlbumEditor()
     await loadAlbums()
   } catch {
     albumEditorError.value = '删除失败，请确认登录状态有效后重试。'
+  } finally {
+    isDeletingAlbum.value = false
   }
 }
 
@@ -336,7 +359,8 @@ function nextPhoto() {
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
-    if (selectedPhoto.value) closePhoto()
+    if (isDeleteConfirmOpen.value) cancelDeleteAlbum()
+    else if (selectedPhoto.value) closePhoto()
     else if (selectedAlbum.value) closeAlbum()
     else if (isAlbumEditorOpen.value) closeAlbumEditor()
   } else if (selectedPhoto.value) {
@@ -367,9 +391,9 @@ watch(
 )
 
 watch(
-  [selectedAlbum, selectedPhoto, isAlbumEditorOpen],
-  ([album, photo, editor]) => {
-    document.body.style.overflow = album || photo || editor ? 'hidden' : ''
+  [selectedAlbum, selectedPhoto, isAlbumEditorOpen, isDeleteConfirmOpen],
+  ([album, photo, editor, confirmDialog]) => {
+    document.body.style.overflow = album || photo || editor || confirmDialog ? 'hidden' : ''
   },
   { immediate: true },
 )
@@ -669,23 +693,65 @@ onUnmounted(() => {
                 <Save :size="17" />
                 {{ isSavingAlbum ? '保存中...' : isUploadingCover ? '上传封面中...' : '保存' }}
               </button>
+              <button type="button" class="login-btn login-btn-cancel" @click="closeAlbumEditor">
+                取消
+              </button>
               <button
                 v-if="albumEditorMode === 'edit'"
                 type="button"
-                class="login-btn login-btn-cancel album-delete-btn"
-                @click="deleteAlbum(albumForm)"
+                class="login-btn album-delete-btn"
+                :disabled="isSavingAlbum || isUploadingCover"
+                @click="requestDeleteAlbum(albumForm)"
               >
                 <Trash2 :size="16" />
                 删除
-              </button>
-              <button type="button" class="login-btn login-btn-cancel" @click="closeAlbumEditor">
-                取消
               </button>
             </div>
           </form>
         </aside>
       </div>
     </Transition>
+
+    <!-- Delete Album Confirm Dialog -->
+    <Teleport to="body">
+      <Transition name="confirm">
+        <div
+          v-if="isDeleteConfirmOpen && deleteTarget"
+          class="album-confirm-overlay"
+          @click.self="cancelDeleteAlbum"
+        >
+          <div class="album-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="album-confirm-title">
+            <div class="album-confirm-icon">
+              <AlertTriangle :size="28" />
+            </div>
+            <div class="album-confirm-body">
+              <h3 id="album-confirm-title">删除相册</h3>
+              <p>
+                确认删除相册「{{ deleteTarget.title }}」吗？该相册的全部照片将被一并删除，此操作不可撤销。
+              </p>
+            </div>
+            <div class="album-confirm-actions">
+              <button
+                type="button"
+                class="album-confirm-cancel"
+                :disabled="isDeletingAlbum"
+                @click="cancelDeleteAlbum"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                class="album-confirm-delete"
+                :disabled="isDeletingAlbum"
+                @click="confirmDeleteAlbum"
+              >
+                {{ isDeletingAlbum ? '删除中...' : '确认删除' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Album Detail Modal -->
     <Transition name="fade">
@@ -818,23 +884,29 @@ onUnmounted(() => {
 }
 
 .album-cover-desc {
-  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.album-cover-desc > :last-child {
+  display: flex;
+  flex-direction: column;
 }
 
 .album-cover-desc > :last-child textarea {
-  min-height: 232px;
+  flex: 1;
+  min-height: 180px;
 }
 
 .album-cover-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   margin-top: 4px;
 }
 
 .album-cover-preview {
-  width: min(280px, 100%);
+  width: min(220px, 100%);
   aspect-ratio: 16 / 10;
   display: flex;
   align-items: center;
@@ -902,8 +974,133 @@ onUnmounted(() => {
 }
 
 .album-delete-btn {
-  flex: 0 0 auto;
-  color: #c0392b !important;
+  margin-left: auto;
+  border-color: #dc2626 !important;
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+.album-delete-btn:hover:not(:disabled) {
+  background: #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+
+.album-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 删除确认弹窗 */
+.album-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.album-confirm-dialog {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--paper, #ffffff);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.album-confirm-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.album-confirm-body h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink, #17211f);
+}
+
+.album-confirm-body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted, #5f6f69);
+}
+
+.album-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.album-confirm-cancel,
+.album-confirm-delete {
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.album-confirm-cancel {
+  border: 1px solid var(--line, #dce5df);
+  background: #ffffff;
+  color: var(--ink, #17211f);
+}
+
+.album-confirm-cancel:hover:not(:disabled) {
+  background: var(--soft, #eef4f0);
+}
+
+.album-confirm-delete {
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.album-confirm-delete:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.album-confirm-cancel:disabled,
+.album-confirm-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirm-enter-active,
+.confirm-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.confirm-enter-from,
+.confirm-leave-to {
+  opacity: 0;
+}
+
+.confirm-enter-active .album-confirm-dialog,
+.confirm-leave-active .album-confirm-dialog {
+  transition: transform 0.25s ease;
+}
+
+.confirm-enter-from .album-confirm-dialog,
+.confirm-leave-to .album-confirm-dialog {
+  transform: scale(0.96);
 }
 
 
