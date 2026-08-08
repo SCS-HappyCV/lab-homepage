@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
   X,
   Calendar,
@@ -41,7 +41,6 @@ const searchText = ref('')
 const sortOrder = ref<SortOrder>('desc')
 const selectedAlbum = ref<Album | null>(null)
 const selectedPhoto = ref<Photo | null>(null)
-const photoRatios = ref<Record<string, number>>({})
 const detailLoading = ref(false)
 
 // 相册新建/编辑对话框
@@ -443,27 +442,6 @@ function onKeydown(e: KeyboardEvent) {
     if (e.key === 'ArrowRight') nextPhoto()
   }
 }
-
-function updatePhotoRatio(photo: Photo) {
-  const img = new Image()
-  img.onload = () => {
-    photoRatios.value[photo.id] = img.naturalWidth / img.naturalHeight
-  }
-  img.src = resolvePhotoUrl(photo.imageUrl)
-}
-
-watch(
-  () => selectedAlbum.value?.photos,
-  (photos) => {
-    if (!photos) return
-    nextTick(() => {
-      photos.forEach((photo) => {
-        if (!photoRatios.value[photo.id]) updatePhotoRatio(photo)
-      })
-    })
-  },
-  { immediate: true },
-)
 
 watch(
   [selectedAlbum, selectedPhoto, isAlbumEditorOpen, isDeleteConfirmOpen],
@@ -886,9 +864,6 @@ onUnmounted(() => {
               v-for="photo in selectedAlbum.photos"
               :key="photo.id"
               class="event-photo-item"
-              :style="{
-                aspectRatio: photoRatios[photo.id] ? String(photoRatios[photo.id]) : '1.5',
-              }"
               @click="openPhoto(photo)"
             >
               <img
@@ -1585,24 +1560,28 @@ onUnmounted(() => {
 }
 
 .event-photos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
+  column-count: 4;
+  column-gap: 10px;
   padding: 24px 28px;
   overflow-y: auto;
 }
 
 .event-photo-item {
   position: relative;
+  display: block;
+  width: 100%;
+  margin: 0 0 10px;
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
   background: #f1f5f9;
+  break-inside: avoid;
 }
 
 .event-photo-item img {
   width: 100%;
-  height: 100%;
+  height: auto;
+  display: block;
   object-fit: cover;
   transition: transform 0.3s;
 }
@@ -1804,9 +1783,13 @@ onUnmounted(() => {
   }
 
   .event-photos-grid {
-    grid-template-columns: repeat(2, 1fr);
+    column-count: 2;
+    column-gap: 8px;
     padding: 16px;
-    gap: 8px;
+  }
+
+  .event-photo-item {
+    margin-bottom: 8px;
   }
 }
 
