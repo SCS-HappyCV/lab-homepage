@@ -1,4 +1,5 @@
 import type { StudentProfile } from '../data/students/types'
+import type { Album, AlbumListItem, AlbumInput, Photo } from '../data/gallery/types'
 
 const TOKEN_KEY = 'lab-member-admin-token'
 
@@ -229,6 +230,71 @@ export function createMemberApi({ baseUrl, storage, fetchImpl = fetch }: MemberA
       })
     },
 
+    // 相册相关 API
+    listAlbums() {
+      return requestJson<AlbumListItem[]>('/albums')
+    },
+
+    getAlbum(id: string) {
+      return requestJson<Album>(`/albums/${encodeURIComponent(id)}`)
+    },
+
+    createAlbum(input: AlbumInput) {
+      return requestJson<Album>('/albums', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      })
+    },
+
+    updateAlbum(id: string, input: AlbumInput) {
+      return requestJson<Album>(`/albums/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      })
+    },
+
+    deleteAlbum(id: string) {
+      return requestJson<void>(`/albums/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    },
+
+    uploadAlbumPhotos(id: string, files: File[]): Promise<{ photos: Photo[] }> {
+      const formData = new FormData()
+      files.forEach((file) => formData.append('photos', file))
+      return fetchImpl(`${normalizedBaseUrl}/albums/${encodeURIComponent(id)}/photos`, {
+        method: 'POST',
+        headers: { Authorization: storage.getToken() ? `Bearer ${storage.getToken()}` : '' },
+        body: formData,
+      }).then(handleUploadResponse)
+    },
+
+    reorderAlbumPhotos(id: string, orderedIds: string[]) {
+      return requestJson<{ ok: boolean }>(`/albums/${encodeURIComponent(id)}/photos/reorder`, {
+        method: 'PUT',
+        body: JSON.stringify({ orderedIds }),
+      })
+    },
+
+    updatePhotoCaption(photoId: string, caption: string) {
+      return requestJson<Photo>(`/photos/${encodeURIComponent(photoId)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ caption }),
+      })
+    },
+
+    deletePhoto(photoId: string) {
+      return requestJson<void>(`/photos/${encodeURIComponent(photoId)}`, { method: 'DELETE' })
+    },
+
+    uploadAlbumCover(id: string, file: File): Promise<Album> {
+      const formData = new FormData()
+      formData.append('photo', file)
+      return fetchImpl(`${normalizedBaseUrl}/albums/${encodeURIComponent(id)}/cover`, {
+        method: 'POST',
+        headers: { Authorization: storage.getToken() ? `Bearer ${storage.getToken()}` : '' },
+        body: formData,
+      }).then(handleUploadResponse)
+    },
+
     // 专利相关API
     listPatents(page: number = 1, pageSize: number = 10) {
       return requestJson<PaginatedResult<Patent>>(`/patents?page=${page}&pageSize=${pageSize}`)
@@ -311,6 +377,14 @@ export function createMemberApi({ baseUrl, storage, fetchImpl = fetch }: MemberA
       })
     },
   }
+}
+
+async function handleUploadResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Upload failed' }))
+    throw new Error(error.error || error.message || `Upload failed with ${response.status}`)
+  }
+  return response.json() as Promise<T>
 }
 
 export const memberApi = createMemberApi({
