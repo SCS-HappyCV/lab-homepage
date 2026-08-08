@@ -161,6 +161,7 @@ export function createAlbumRepository(db: AppDatabase): AlbumRepository {
       if (existing.length !== orderedIds.length) return false
       const existingSet = new Set(existing.map((r) => r.id))
       if (!orderedIds.every((id) => existingSet.has(id))) return false
+      if (new Set(orderedIds).size !== existing.length) return false
 
       db.exec('BEGIN')
       try {

@@ -103,6 +103,22 @@ test('reorderPhotos reassigns sortOrder by provided id order', () => {
   assert.deepEqual(photos.map((p) => p.sortOrder), [0, 1, 2])
 })
 
+test('reorderPhotos rejects duplicate ids and preserves original order', () => {
+  const repo = createTestRepo()
+  repo.create('a1', sampleInput())
+  const added = repo.addPhotos('a1', [
+    { imageUrl: '/1.jpg', thumbUrl: '/1.webp' },
+    { imageUrl: '/2.jpg', thumbUrl: '/2.webp' },
+    { imageUrl: '/3.jpg', thumbUrl: '/3.webp' },
+  ])
+  const originalOrder = added.map((p) => p.id)
+  const dupOrder = [added[0].id, added[0].id, added[1].id]
+  assert.equal(repo.reorderPhotos('a1', dupOrder), false)
+  const photos = repo.get('a1')!.photos
+  assert.deepEqual(photos.map((p) => p.id), originalOrder)
+  assert.deepEqual(photos.map((p) => p.sortOrder), [0, 1, 2])
+})
+
 test('updatePhotoCaption and deletePhoto work', () => {
   const repo = createTestRepo()
   repo.create('a1', sampleInput())
