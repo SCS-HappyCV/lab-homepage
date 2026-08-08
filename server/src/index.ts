@@ -6,6 +6,8 @@ import { loadConfig } from './config.js'
 import { openDatabase } from './db.js'
 import { createStudentRepository } from './students.repo.js'
 import { createStudentRouter } from './students.routes.js'
+import { createAlbumRepository } from './albums/albums.repo.js'
+import { createAlbumRouter } from './albums/albums.routes.js'
 import { createPatentRouter } from './patents.routes.js'
 import { createPatentRecognitionRouter } from './patent/patent-recognition.routes.js'
 import type { ServerConfig } from './types.js'
@@ -46,6 +48,7 @@ export function createApp(options: Partial<AppOptions> = {}) {
   const authService = createAuthService(config)
   const db = openDatabase(config.sqlitePath)
   const studentRepo = createStudentRepository(db)
+  const albumRepo = createAlbumRepository(db)
 
   // 专利识别模块配置
   const patentUploadDir = process.env.PATENT_UPLOAD_DIR || path.join(process.cwd(), 'data', 'patents')
@@ -53,6 +56,7 @@ export function createApp(options: Partial<AppOptions> = {}) {
 
   registerAuthRoutes(app, authService)
   app.use(createStudentRouter({ repo: studentRepo, authService, uploadDir: config.uploadDir }))
+  app.use(createAlbumRouter({ repo: albumRepo, authService, albumUploadDir: config.albumUploadDir }))
   app.use(createPatentRouter({ db, authService, uploadDir: config.uploadDir }))
   app.use(createPatentRecognitionRouter({
     db,
