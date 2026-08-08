@@ -131,6 +131,10 @@ function closeAlbumEditor() {
   resetPendingCover()
 }
 
+function pickCoverFile() {
+  coverFileInput.value?.click()
+}
+
 function onCoverFileSelected(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -588,17 +592,19 @@ onUnmounted(() => {
 
             <div class="editor-body">
               <div class="editor-section">
-                <label class="editor-field">
-                  封面图片
-                  <div class="album-cover-field">
-                    <div class="album-cover-preview">
-                      <img v-if="coverPreviewUrl" :src="coverPreviewUrl" alt="封面预览" />
-                      <span v-else class="album-cover-empty">未选择封面</span>
-                    </div>
-                    <div class="album-cover-actions">
-                      <label class="album-cover-pick">
-                        <Upload :size="15" />
-                        选择文件
+                <div class="editor-fields album-cover-desc">
+                  <label class="editor-field">
+                    封面图片
+                    <div class="album-cover-field">
+                      <div class="album-cover-preview">
+                        <img v-if="coverPreviewUrl" :src="coverPreviewUrl" alt="封面预览" />
+                        <span v-else class="album-cover-empty">未选择封面</span>
+                      </div>
+                      <div class="album-cover-actions">
+                        <button class="album-cover-pick" type="button" @click="pickCoverFile">
+                          <Upload :size="15" />
+                          选择文件
+                        </button>
                         <input
                           ref="coverFileInput"
                           type="file"
@@ -606,16 +612,21 @@ onUnmounted(() => {
                           class="album-cover-input"
                           @change="onCoverFileSelected"
                         />
+                        <span class="album-cover-filename">{{ selectedCoverName || '未选择文件' }}</span>
+                      </div>
+                      <p class="album-cover-hint">建议横版 16:10，JPG/PNG/WebP，单张 ≤5MB</p>
+                      <label class="album-featured-field">
+                        <input v-model="albumForm.featured" type="checkbox" />
+                        <span>在照片墙顶部展示</span>
                       </label>
-                      <span class="album-cover-filename">{{ selectedCoverName || '未选择文件' }}</span>
                     </div>
-                    <p class="album-cover-hint">建议横版 16:10，JPG/PNG/WebP，单张 ≤5MB</p>
-                    <label class="album-featured-field">
-                      <input v-model="albumForm.featured" type="checkbox" />
-                      <span>在照片墙顶部展示</span>
-                    </label>
-                  </div>
-                </label>
+                  </label>
+
+                  <label class="editor-field">
+                    相册描述
+                    <textarea v-model="albumForm.description" rows="9" maxlength="500"></textarea>
+                  </label>
+                </div>
               </div>
 
               <div class="editor-section">
@@ -644,13 +655,6 @@ onUnmounted(() => {
                     <DatePicker v-model="albumForm.date" />
                   </label>
                 </div>
-              </div>
-
-              <div class="editor-section">
-                <label class="editor-field">
-                  相册描述
-                  <textarea v-model="albumForm.description" rows="3" maxlength="500"></textarea>
-                </label>
               </div>
 
               <p v-if="albumEditorError" class="login-error editor-error">{{ albumEditorError }}</p>
@@ -813,6 +817,15 @@ onUnmounted(() => {
   accent-color: var(--green, #1d8163);
 }
 
+.album-cover-desc {
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.album-cover-desc > :last-child textarea {
+  min-height: 232px;
+}
+
 .album-cover-field {
   display: flex;
   flex-direction: column;
@@ -860,6 +873,7 @@ onUnmounted(() => {
   border-radius: 8px;
   color: var(--green, #1d8163);
   background: #ffffff;
+  font: inherit;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -1365,6 +1379,16 @@ onUnmounted(() => {
     grid-template-columns: repeat(2, 1fr);
     padding: 16px;
     gap: 8px;
+  }
+}
+
+@media (max-width: 820px) {
+  .album-cover-desc {
+    grid-template-columns: 1fr;
+  }
+
+  .album-cover-desc > :last-child textarea {
+    min-height: 120px;
   }
 }
 </style>
