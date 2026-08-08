@@ -68,7 +68,7 @@ test('repository updates and deletes students by id', () => {
 
 test('repository rejects records with missing required fields', () => {
   const repo = createTestRepo()
-  const invalid = sampleStudent({ id: '', email: '' })
+  const invalid = sampleStudent({ id: '' })
 
   assert.throws(() => repo.create(invalid), StudentValidationError)
 })

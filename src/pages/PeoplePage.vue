@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   ArrowDown,
   ArrowUp,
@@ -8,6 +8,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  GraduationCap,
   Lock,
   Mail,
   MapPin,
@@ -25,6 +26,7 @@ import { memberApi } from '../utils/api'
 import { useAuth } from '../utils/useAuth'
 import { publicAsset, resolvePhotoUrl } from '../utils/publicAsset'
 import PhotoUploader from '../components/PhotoUploader.vue'
+import DatePicker from '../components/DatePicker.vue'
 
 type EditorMode = 'create' | 'edit'
 type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experiences'> & {
@@ -229,51 +231,12 @@ watch([nativeProvince, nativeCity], () => {
   }
 })
 
-// ---- 出生日期三级联 ----
-
-const birthYear = ref('')
-const birthMonth = ref('')
-const birthDay = ref('')
-
-const birthYears = computed(() => {
-  const current = new Date().getFullYear()
-  const years: string[] = []
-  for (let y = current - 60; y <= current; y++) {
-    years.push(String(y))
-  }
-  return years.reverse()
+const birthDateMax = computed(() => {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
 })
-
-const birthMonths = computed(() =>
-  Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')),
-)
-
-const birthDays = computed(() => {
-  if (!birthYear.value || !birthMonth.value) return []
-  const daysInMonth = new Date(Number(birthYear.value), Number(birthMonth.value), 0).getDate()
-  return Array.from({ length: daysInMonth }, (_, i) => String(i + 1).padStart(2, '0'))
-})
-
-watch([birthYear, birthMonth, birthDay], ([year, month, day]) => {
-  if (year && month && day) {
-    editorForm.value.birthDate = `${year}-${month}-${day}`
-  } else {
-    editorForm.value.birthDate = ''
-  }
-})
-
-function parseBirthDate(raw: string | undefined) {
-  birthYear.value = ''
-  birthMonth.value = ''
-  birthDay.value = ''
-  if (!raw) return
-  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!match) return
-  const [, y, m, d] = match
-  birthYear.value = y
-  birthMonth.value = m
-  birthDay.value = d
-}
 
 const cohortOrder = computed(() =>
   Array.from(new Set(members.value.map((member) => member.cohort))).sort((a, b) => b.localeCompare(a)),
@@ -439,9 +402,6 @@ function openCreateEditor() {
   nativeCity.value = ''
   destProvince.value = ''
   destCity.value = ''
-  birthYear.value = ''
-  birthMonth.value = ''
-  birthDay.value = ''
   editorError.value = ''
   isEditorOpen.value = true
 }
@@ -449,10 +409,8 @@ function openCreateEditor() {
 function openEditEditor(member: StudentProfile) {
   editorMode.value = 'edit'
   editorForm.value = toForm(member)
-  editorForm.value.advisor = ''
   parseNativePlace(member.nativePlace ?? '')
   parseDestination(member.destination ?? '')
-  parseBirthDate(member.birthDate ?? '')
   editorError.value = ''
   isEditorOpen.value = true
 }
@@ -594,6 +552,18 @@ function createMemberId(form: MemberForm) {
 onMounted(() => {
   void loadMembers()
 })
+
+watch(
+  [selectedMember, isEditorOpen],
+  ([member, editor]) => {
+    document.body.style.overflow = member || editor ? 'hidden' : ''
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = ''
+})
 </script>
 
 <template>
@@ -621,15 +591,20 @@ onMounted(() => {
           <h2>团队成员档案</h2>
           <p v-if="apiError" class="api-state warning">{{ apiError }}</p>
         </div>
+        <div class="toolbar-actions">
+          <button v-if="isMember" class="member-create-btn" type="button" @click="openCreateEditor">
+            <Plus :size="16" />
+            <span>新增成员</span>
+          </button>
+          <label class="people-search toolbar-search">
+            <Search :size="18" />
+            <input v-model="searchText" type="search" placeholder="搜索姓名、方向、邮箱或去向" />
+          </label>
+        </div>
       </div>
 
       <div class="cohort-layout">
         <aside class="filter-panel" aria-label="成员筛选与排序">
-          <label class="people-search filter-panel-search">
-            <Search :size="18" />
-            <input v-model="searchText" type="search" placeholder="搜索姓名、方向、邮箱或去向" />
-          </label>
-
           <div class="filter-group">
             <h3 class="filter-panel-title">排序</h3>
             <div class="sort-group sort-group-vertical">
@@ -714,11 +689,6 @@ onMounted(() => {
               </button>
             </div>
           </div>
-
-          <button v-if="isMember" class="member-create-btn" type="button" @click="openCreateEditor">
-            <Plus :size="20" />
-            <span>新增成员</span>
-          </button>
         </aside>
 
         <div class="member-groups">
@@ -743,13 +713,16 @@ onMounted(() => {
                   </div>
                   <div class="member-info">
                     <div class="member-title-row">
-                      <h4>{{ member.name }}</h4>
+                      <div class="member-name-line">
+                        <h4>{{ member.name }}</h4>
+                        <span v-if="member.degree" class="member-degree-tag">{{ member.degree }}</span>
+                      </div>
                       <span class="status-badge" :class="member.status">{{ statusLabel(member.status) }}</span>
                     </div>
-                    <p>{{ member.degree }}</p>
-                    <div class="tag-list">
-                      <span v-for="tag in member.research" :key="tag">{{ tag }}</span>
-                    </div>
+                    <p v-if="member.advisor" class="member-advisor-line">
+                      <GraduationCap :size="14" />
+                      <span>导师：{{ member.advisor }}</span>
+                    </p>
                     <div class="member-facts">
                       <span>
                         <Award :size="15" />
@@ -767,6 +740,9 @@ onMounted(() => {
                     <div v-if="isMember && member.destination" class="destination">
                       <BriefcaseBusiness :size="15" />
                       <span>{{ [parseDestinationDisplay(member.destination).city, parseDestinationDisplay(member.destination).unit].filter(Boolean).join('/') }}</span>
+                    </div>
+                    <div class="tag-list">
+                      <span v-for="tag in member.research" :key="tag">{{ tag }}</span>
                     </div>
                   </div>
                 </button>
@@ -825,13 +801,16 @@ onMounted(() => {
                         <p v-if="selectedMember.nativePlace" class="modal-native">
                           {{ selectedMember.nativePlace }}
                         </p>
-                        <p v-if="selectedMember.advisor" class="modal-advisor"><strong>导师</strong>：{{ selectedMember.advisor }}</p>
-                      </div>
-                      <div class="modal-degree-row">
-                        <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}级</p>
                         <p v-if="isMember && selectedMember.birthDate" class="modal-birth">
                           <Calendar :size="14" />
                           {{ selectedMember.birthDate }}
+                        </p>
+                      </div>
+                      <div class="modal-degree-row">
+                        <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}级</p>
+                        <p v-if="selectedMember.advisor" class="modal-advisor">
+                          <GraduationCap :size="15" />
+                          {{ selectedMember.advisor }}
                         </p>
                       </div>
                     </div>
@@ -934,154 +913,134 @@ onMounted(() => {
           </div>
 
           <div class="editor-body">
-            <div class="editor-photo-section">
-              <span class="editor-section-label">成员头像</span>
-              <PhotoUploader
-                v-model="editorForm.photo"
-                :member-name="editorForm.name"
-                mode="avatar"
-                @upload-error="handlePhotoUploadError"
-              />
-            </div>
-
-            <div class="editor-photo-section">
-              <span class="editor-section-label">背景图片</span>
-              <PhotoUploader
-                v-model="editorForm.coverPhoto"
-                :member-name="editorForm.name"
-                mode="cover"
-                @upload-error="handlePhotoUploadError"
-              />
-            </div>
-
-            <div class="editor-grid">
-              <label>
-                <span>姓名 <em class="required-hint">(必填)</em></span>
-                <input v-model="editorForm.name" type="text" required />
-              </label>
-              <label>
-                <span>年级 <em class="required-hint">(必填)</em></span>
-                <input v-model="editorForm.cohort" type="text" required />
-              </label>
-            </div>
-            <div class="editor-grid">
-              <label>
-                <span>学位</span>
-                <select v-model="editorForm.degree">
-                  <option value="">请选择</option>
-                  <option value="硕士">硕士</option>
-                  <option value="博士">博士</option>
-                </select>
-              </label>
-              <label>
-                <span>状态</span>
-                <select v-model="editorForm.status">
-                  <option value="current">在读</option>
-                  <option value="alumni">已毕业</option>
-                </select>
-              </label>
-            </div>
-            <div class="editor-grid">
-              <label>
-                <span>导师</span>
-                <select v-model="editorForm.advisor">
-                  <option value="">请选择</option>
-                  <option value="周维">周维</option>
-                  <option value="许海霞">许海霞</option>
-                </select>
-              </label>
-              <label>
-                <span>&nbsp;</span>
-              </label>
-            </div>
-            <div class="editor-grid">
-              <label>
-                <span>籍贯</span>
-                <select v-model="nativeProvince" @change="nativeCity = ''">
-                  <option value="">请选择省份</option>
-                  <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
-                </select>
-              </label>
-              <label>
-                <span>&nbsp;</span>
-                <select v-model="nativeCity" :disabled="!nativeProvince">
-                  <option value="">请选择城市</option>
-                  <option v-for="c in nativeCities" :key="c" :value="c">{{ c }}</option>
-                </select>
-              </label>
-            </div>
-            <div class="editor-grid">
-              <label>
-                <span>出生日期</span>
-                <select v-model="birthYear" @change="birthMonth = ''; birthDay = ''">
-                  <option value="">年</option>
-                  <option v-for="y in birthYears" :key="y" :value="y">{{ y }}</option>
-                </select>
-              </label>
-              <label>
-                <span>&nbsp;</span>
-                <div class="birth-date-row">
-                  <select v-model="birthMonth" :disabled="!birthYear" @change="birthDay = ''">
-                    <option value="">月</option>
-                    <option v-for="m in birthMonths" :key="m" :value="m">{{ m }}</option>
-                  </select>
-                  <select v-model="birthDay" :disabled="!birthYear || !birthMonth">
-                    <option value="">日</option>
-                    <option v-for="d in birthDays" :key="d" :value="d">{{ d }}</option>
-                  </select>
+            <section class="editor-section editor-section-photos">
+              <div class="editor-photos">
+                <div class="editor-photo-cell editor-photo-avatar">
+                  <PhotoUploader
+                    v-model="editorForm.photo"
+                    :member-name="editorForm.name"
+                    mode="avatar"
+                    @upload-error="handlePhotoUploadError"
+                  />
+                  <span class="editor-photo-hint">成员头像</span>
                 </div>
-              </label>
-            </div>
-            <div class="editor-grid">
-              <label>
-                <span>电话</span>
-                <input v-model="editorForm.phone" type="text" />
-              </label>
-              <label>
-                <span>邮箱</span>
-                <input v-model="editorForm.email" type="email" />
-              </label>
-            </div>
+                <div class="editor-photo-cell editor-photo-cover">
+                  <PhotoUploader
+                    v-model="editorForm.coverPhoto"
+                    :member-name="editorForm.name"
+                    mode="cover"
+                    @upload-error="handlePhotoUploadError"
+                  />
+                  <span class="editor-photo-hint">背景图片</span>
+                </div>
+              </div>
+            </section>
 
-            <div v-if="editorForm.status !== 'current'" class="editor-destination">
-              <span class="editor-section-label">毕业去向</span>
-              <div class="editor-grid">
-                <label>
-                  <select v-model="destProvince" @change="destCity = ''">
-                    <option value="">单位所在省</option>
-                    <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
+            <section class="editor-section">
+              <div class="editor-fields">
+                <label class="editor-field">
+                  <span>姓名 <em class="required-hint">*</em></span>
+                  <input v-model="editorForm.name" type="text" required />
+                </label>
+                <label class="editor-field">
+                  <span>年级 <em class="required-hint">*</em></span>
+                  <input v-model="editorForm.cohort" type="text" required />
+                </label>
+                <div class="editor-field editor-field-cascade">
+                  <span>籍贯</span>
+                  <div class="editor-cascade">
+                    <select v-model="nativeProvince" @change="nativeCity = ''">
+                      <option value="">省份</option>
+                      <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
+                    </select>
+                    <select v-model="nativeCity" :disabled="!nativeProvince">
+                      <option value="">城市</option>
+                      <option v-for="c in nativeCities" :key="c" :value="c">{{ c }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="editor-field">
+                  <span>出生日期</span>
+                  <DatePicker v-model="editorForm.birthDate" :max="birthDateMax" />
+                </div>
+
+                <label class="editor-field">
+                  <span>学位</span>
+                  <select v-model="editorForm.degree">
+                    <option value="">请选择</option>
+                    <option value="硕士">硕士</option>
+                    <option value="博士">博士</option>
                   </select>
                 </label>
-                <label>
-                  <select v-model="destCity" :disabled="!destProvince">
-                    <option value="">单位所在市</option>
-                    <option v-for="c in destCities" :key="c" :value="c">{{ c }}</option>
+                <label class="editor-field">
+                  <span>状态</span>
+                  <select v-model="editorForm.status">
+                    <option value="current">在读</option>
+                    <option value="alumni">已毕业</option>
                   </select>
+                </label>
+                <label class="editor-field editor-field-wide">
+                  <span>导师</span>
+                  <select v-model="editorForm.advisor">
+                    <option value="">请选择</option>
+                    <option value="周维">周维</option>
+                    <option value="许海霞">许海霞</option>
+                  </select>
+                </label>
+
+                <label class="editor-field editor-field-wide">
+                  <span>电话</span>
+                  <input v-model="editorForm.phone" type="text" />
+                </label>
+                <label class="editor-field editor-field-wide">
+                  <span>邮箱</span>
+                  <input v-model="editorForm.email" type="email" />
                 </label>
               </div>
-              <label class="editor-destination-unit">
-                <input v-model="editorForm.destination" type="text" placeholder="单位名称" />
-              </label>
-            </div>
 
-            <label>
-              <span>研究方向（每行一个）</span>
-              <textarea v-model="editorForm.researchText" rows="3"></textarea>
-            </label>
-            <label>
-              <span>个人简介</span>
-              <textarea v-model="editorForm.bio" rows="4"></textarea>
-            </label>
-            <label>
-              <span>代表成果（每行一个）</span>
-              <textarea v-model="editorForm.achievementsText" rows="4"></textarea>
-            </label>
-            <label>
-              <span>个人经历（每行一个）</span>
-              <textarea v-model="editorForm.experiencesText" rows="4"></textarea>
-            </label>
+              <div v-if="editorForm.status !== 'current'" class="editor-destination-fields">
+                <div class="editor-field editor-field-cascade">
+                  <span>单位所在地</span>
+                  <div class="editor-cascade">
+                    <select v-model="destProvince" @change="destCity = ''">
+                      <option value="">省份</option>
+                      <option v-for="r in regionData" :key="r.name" :value="r.name">{{ r.name }}</option>
+                    </select>
+                    <select v-model="destCity" :disabled="!destProvince">
+                      <option value="">城市</option>
+                      <option v-for="c in destCities" :key="c" :value="c">{{ c }}</option>
+                    </select>
+                  </div>
+                </div>
+                <label class="editor-field">
+                  <span>单位名称</span>
+                  <input v-model="editorForm.destination" type="text" placeholder="例如：某某大学 / 某某公司" />
+                </label>
+              </div>
+            </section>
 
-            <p v-if="editorError" class="login-error">{{ editorError }}</p>
+            <section class="editor-section">
+              <div class="editor-textareas">
+                <label class="editor-field">
+                  <span>研究方向（每行一个）</span>
+                  <textarea v-model="editorForm.researchText" rows="4"></textarea>
+                </label>
+                <label class="editor-field">
+                  <span>个人简介</span>
+                  <textarea v-model="editorForm.bio" rows="4"></textarea>
+                </label>
+                <label class="editor-field">
+                  <span>代表成果（每行一个）</span>
+                  <textarea v-model="editorForm.achievementsText" rows="4"></textarea>
+                </label>
+                <label class="editor-field">
+                  <span>个人经历（每行一个）</span>
+                  <textarea v-model="editorForm.experiencesText" rows="4"></textarea>
+                </label>
+              </div>
+            </section>
+
+            <p v-if="editorError" class="login-error editor-error">{{ editorError }}</p>
           </div>
 
           <div class="editor-footer">

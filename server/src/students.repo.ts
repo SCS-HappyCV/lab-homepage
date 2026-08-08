@@ -11,7 +11,6 @@ const requiredTextFields: Array<keyof StudentRecord> = [
   'id',
   'name',
   'cohort',
-  'email',
 ]
 
 export class StudentValidationError extends Error {

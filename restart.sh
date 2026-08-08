@@ -25,6 +25,11 @@ else
   pm2 start "$SCRIPT_DIR/ecosystem.config.cjs"
 fi
 
-pm2 save
+pm2 save >/dev/null
 
-echo "✅ 项目构建与服务重启完成"
+cat <<EOF
+
+✅ 部署完成。
+   前端：https://www.scs-happycv.top  （nginx 托管 $REPO_DIR/docs）
+   后端：https://api.scs-happycv.top  （PM2 → 127.0.0.1:3003）
+EOF
