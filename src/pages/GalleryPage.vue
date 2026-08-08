@@ -884,7 +884,7 @@ onUnmounted(() => {
 }
 
 .album-cover-desc {
-  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 380px) minmax(0, 280px);
   align-items: stretch;
 }
 
@@ -906,7 +906,8 @@ onUnmounted(() => {
 }
 
 .album-cover-preview {
-  width: min(220px, 100%);
+  width: 100%;
+  max-width: 360px;
   aspect-ratio: 16 / 10;
   display: flex;
   align-items: center;
