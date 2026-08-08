@@ -148,6 +148,10 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
     const album = repo.get(id)
     if (!album) {
       await cleanupRawFiles(files)
+      const albumDir = safeAlbumDir(id)
+      if (albumDir) {
+        await fs.rmdir(albumDir).catch(() => {})
+      }
       res.status(404).json({ error: 'Album not found' })
       return
     }
@@ -218,6 +222,10 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
     const album = repo.get(id)
     if (!album) {
       await cleanupRawFiles(req.file ? [req.file] : [])
+      const albumDir = safeAlbumDir(id)
+      if (albumDir) {
+        await fs.rmdir(albumDir).catch(() => {})
+      }
       res.status(404).json({ error: 'Album not found' })
       return
     }
@@ -280,20 +288,19 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
 
   // multer 在遇到非法文件/超限时会直接 next(error)，不会进入路由处理器；
   // 此时同批已写入磁盘的 raw-* 临时文件需要在错误中间件里清理，避免孤儿文件。
+  // 只删除本请求已接受的文件（req.files / req.file），避免并发误删其他请求的临时文件。
   router.use(async (error: unknown, req: Request, res: Response, next: NextFunction) => {
     if (
       error instanceof multer.MulterError ||
       (error instanceof Error && error.message.includes('不支持的文件类型'))
     ) {
-      const dir = safeAlbumDir(String(req.params.id ?? ''))
-      if (dir !== null) {
-        const files = await fs.readdir(dir).catch(() => [] as string[])
-        await Promise.all(
-          files
-            .filter((f) => f.startsWith('raw-'))
-            .map((f) => fs.unlink(path.join(dir, f)).catch(() => {})),
-        )
+      let files: Array<{ path: string }> | undefined
+      if (req.files && Array.isArray(req.files)) {
+        files = req.files as Express.Multer.File[]
+      } else if (req.file) {
+        files = [req.file]
       }
+      await cleanupRawFiles(files)
     }
     handleUploadError(error, req, res, next)
   })
@@ -306,7 +313,9 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
 
   async function deleteAlbumFile(url: string): Promise<void> {
     if (!url.startsWith(URL_PREFIX)) return
-    const abs = path.join(albumUploadDir, url.slice(URL_PREFIX.length))
+    const ROOT = path.resolve(albumUploadDir)
+    const abs = path.resolve(ROOT, url.slice(URL_PREFIX.length))
+    if (abs !== ROOT && !abs.startsWith(ROOT + path.sep)) return
     try {
       await fs.unlink(abs)
     } catch (error) {

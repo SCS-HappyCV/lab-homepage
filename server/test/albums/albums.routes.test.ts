@@ -142,12 +142,16 @@ test('uploading cover replaces it and deletes old cover files', async () => {
       const oldCoverUrl = first.body.coverUrl
       const oldCoverPath = join(albumDir, oldCoverUrl.replace('/uploads/albums/', ''))
       assert.ok(existsSync(oldCoverPath))
+      const oldCoverThumbUrl = first.body.coverThumb
+      const oldCoverThumbPath = join(albumDir, oldCoverThumbUrl.replace('/uploads/albums/', ''))
+      assert.ok(existsSync(oldCoverThumbPath))
 
       const c2 = await makeTestJpeg(scratch, 'c2.jpg')
       const second = await request.post(`/albums/${albumId}/cover`).set('Authorization', `Bearer ${token}`)
         .attach('photo', c2).expect(200)
       assert.notEqual(second.body.coverUrl, oldCoverUrl)
       assert.ok(!existsSync(oldCoverPath), 'old cover original should be deleted')
+      assert.ok(!existsSync(oldCoverThumbPath), 'old cover thumbnail should be deleted')
     })
   } finally {
     rmSync(albumDir, { recursive: true, force: true })
