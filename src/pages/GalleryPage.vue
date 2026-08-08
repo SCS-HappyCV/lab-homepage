@@ -76,6 +76,14 @@ const isDeleteConfirmOpen = ref(false)
 const isDeletingAlbum = ref(false)
 const deleteTarget = ref<{ id: string; title: string } | null>(null)
 
+// 相册内照片上传/删除
+const photoFileInput = ref<HTMLInputElement | null>(null)
+const isUploadingPhotos = ref(false)
+const photoActionError = ref('')
+const isDeletePhotoConfirmOpen = ref(false)
+const isDeletingPhoto = ref(false)
+const deletePhotoTarget = ref<Photo | null>(null)
+
 function createEmptyAlbumForm(): AlbumFormState {
   return {
     id: '',
@@ -333,6 +341,72 @@ async function openAlbum(album: AlbumListItem) {
 function closeAlbum() {
   selectedAlbum.value = null
   selectedPhoto.value = null
+  photoActionError.value = ''
+}
+
+function pickPhotos() {
+  photoActionError.value = ''
+  photoFileInput.value?.click()
+}
+
+async function onPhotosSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  if (files.length === 0 || !selectedAlbum.value) return
+  isUploadingPhotos.value = true
+  photoActionError.value = ''
+  try {
+    const { photos } = await memberApi.uploadAlbumPhotos(selectedAlbum.value.id, files)
+    if (!selectedAlbum.value) return
+    selectedAlbum.value = { ...selectedAlbum.value, photos: [...selectedAlbum.value.photos, ...photos] }
+    albums.value = albums.value.map((a) =>
+      a.id === selectedAlbum.value!.id ? { ...a, photosCount: a.photosCount + photos.length } : a,
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    photoActionError.value = message ? `上传失败：${message}` : '照片上传失败，请稍后重试。'
+  } finally {
+    isUploadingPhotos.value = false
+    if (photoFileInput.value) photoFileInput.value.value = ''
+  }
+}
+
+function requestDeletePhoto(photo: Photo) {
+  deletePhotoTarget.value = photo
+  isDeletePhotoConfirmOpen.value = true
+}
+
+function cancelDeletePhoto() {
+  if (isDeletingPhoto.value) return
+  isDeletePhotoConfirmOpen.value = false
+  deletePhotoTarget.value = null
+}
+
+async function confirmDeletePhoto() {
+  const photo = deletePhotoTarget.value
+  if (!photo || isDeletingPhoto.value) return
+  isDeletingPhoto.value = true
+  try {
+    await memberApi.deletePhoto(photo.id)
+    if (selectedAlbum.value) {
+      selectedAlbum.value = {
+        ...selectedAlbum.value,
+        photos: selectedAlbum.value.photos.filter((p) => p.id !== photo.id),
+      }
+      if (selectedPhoto.value?.id === photo.id) selectedPhoto.value = null
+      albums.value = albums.value.map((a) =>
+        a.id === selectedAlbum.value!.id
+          ? { ...a, photosCount: Math.max(0, a.photosCount - 1) }
+          : a,
+      )
+    }
+    isDeletePhotoConfirmOpen.value = false
+    deletePhotoTarget.value = null
+  } catch {
+    photoActionError.value = '删除失败，请确认登录状态有效后重试。'
+  } finally {
+    isDeletingPhoto.value = false
+  }
 }
 
 function openPhoto(photo: Photo) {
@@ -359,7 +433,8 @@ function nextPhoto() {
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
-    if (isDeleteConfirmOpen.value) cancelDeleteAlbum()
+    if (isDeletePhotoConfirmOpen.value) cancelDeletePhoto()
+    else if (isDeleteConfirmOpen.value) cancelDeleteAlbum()
     else if (selectedPhoto.value) closePhoto()
     else if (selectedAlbum.value) closeAlbum()
     else if (isAlbumEditorOpen.value) closeAlbumEditor()
@@ -772,6 +847,16 @@ onUnmounted(() => {
               </div>
             </div>
             <div class="event-modal-actions">
+              <button
+                v-if="isMember"
+                type="button"
+                class="event-modal-upload"
+                :disabled="isUploadingPhotos"
+                @click="pickPhotos"
+              >
+                <Upload :size="16" />
+                {{ isUploadingPhotos ? '上传中...' : '上传照片' }}
+              </button>
               <button class="event-modal-close" @click="closeAlbum">
                 <X :size="22" />
               </button>
@@ -780,7 +865,22 @@ onUnmounted(() => {
 
           <p v-if="selectedAlbum.description" class="event-modal-desc">{{ selectedAlbum.description }}</p>
 
+          <input
+            ref="photoFileInput"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            class="album-photo-input"
+            @change="onPhotosSelected"
+          />
+
+          <p v-if="photoActionError" class="event-photo-error">{{ photoActionError }}</p>
+
           <div v-if="detailLoading" class="event-photos-grid">照片加载中…</div>
+          <div v-else-if="selectedAlbum.photos.length === 0" class="event-photos-empty">
+            <ImageOff :size="36" />
+            <p>该相册暂无照片{{ isMember ? '，点击右上角"上传照片"添加' : '' }}</p>
+          </div>
           <div v-else class="event-photos-grid">
             <div
               v-for="photo in selectedAlbum.photos"
@@ -797,11 +897,59 @@ onUnmounted(() => {
                 loading="lazy"
               />
               <div v-if="photo.caption" class="event-photo-caption">{{ photo.caption }}</div>
+              <button
+                v-if="isMember"
+                type="button"
+                class="event-photo-delete"
+                aria-label="删除照片"
+                @click.stop="requestDeletePhoto(photo)"
+              >
+                <Trash2 :size="14" />
+              </button>
             </div>
           </div>
         </div>
       </div>
     </Transition>
+
+    <!-- Delete Photo Confirm Dialog -->
+    <Teleport to="body">
+      <Transition name="confirm">
+        <div
+          v-if="isDeletePhotoConfirmOpen && deletePhotoTarget"
+          class="album-confirm-overlay"
+          @click.self="cancelDeletePhoto"
+        >
+          <div class="album-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="photo-confirm-title">
+            <div class="album-confirm-icon">
+              <AlertTriangle :size="28" />
+            </div>
+            <div class="album-confirm-body">
+              <h3 id="photo-confirm-title">删除照片</h3>
+              <p>确认删除这张照片吗？该操作不可撤销。</p>
+            </div>
+            <div class="album-confirm-actions">
+              <button
+                type="button"
+                class="album-confirm-cancel"
+                :disabled="isDeletingPhoto"
+                @click="cancelDeletePhoto"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                class="album-confirm-delete"
+                :disabled="isDeletingPhoto"
+                @click="confirmDeletePhoto"
+              >
+                {{ isDeletingPhoto ? '删除中...' : '确认删除' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Photo Lightbox -->
     <Transition name="fade">
@@ -1399,6 +1547,36 @@ onUnmounted(() => {
   background: var(--line, #dce5df);
 }
 
+.event-modal-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--green, #1f7a5a);
+  background: var(--green, #1f7a5a);
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.event-modal-upload:hover:not(:disabled) {
+  background: #166b4e;
+  border-color: #166b4e;
+}
+
+.event-modal-upload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.album-photo-input {
+  display: none;
+}
+
 .event-modal-desc {
   padding: 16px 28px 0;
   font-size: 14px;
@@ -1448,6 +1626,62 @@ onUnmounted(() => {
 
 .event-photo-item:hover .event-photo-caption {
   opacity: 1;
+}
+
+.event-photo-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #ffffff;
+  background: rgba(220, 38, 38, 0.85);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.2s, transform 0.2s, background 0.2s;
+}
+
+.event-photo-item:hover .event-photo-delete,
+.event-photo-delete:focus-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.event-photo-delete:hover {
+  background: #b91c1c;
+}
+
+.event-photo-error {
+  margin: 16px 28px 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.event-photos-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 24px;
+  color: var(--muted, #5f6f69);
+}
+
+.event-photos-empty p {
+  margin: 0;
+  font-size: 14px;
 }
 
 .photo-lightbox {
