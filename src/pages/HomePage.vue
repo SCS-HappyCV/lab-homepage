@@ -22,6 +22,7 @@ import { publicAsset } from '../utils/publicAsset'
 import PatentModal from '../components/PatentModal.vue'
 
 const heroGroup = publicAsset('gallery/lab/hero-group.jpg')
+const heroCover = publicAsset('cover-home.jpg')
 
 const researchAreas = [
   {
@@ -66,7 +67,7 @@ function handleWorkItemClick(item: typeof workItems[0]) {
 <template>
   <main id="top">
     <section class="hero-section" aria-labelledby="hero-title">
-      <img class="hero-media" :src="heroGroup" alt="" aria-hidden="true" />
+      <img class="hero-media" :src="heroCover" alt="" aria-hidden="true" />
       <div class="hero-overlay"></div>
       <div class="hero-content">
         <p class="eyebrow">Xiangtan University · Computer Vision Research Group</p>
