@@ -24,7 +24,7 @@ export interface AlbumRouterDeps {
 }
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20MB
 const MAX_PHOTOS_PER_BATCH = 30
 const URL_PREFIX = '/uploads/albums/'
 
@@ -378,7 +378,7 @@ function handleUploadError(error: unknown, _req: Request, res: Response, next: N
   }
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      res.status(400).json({ error: '文件大小超过限制（最大 5MB）' })
+      res.status(400).json({ error: `文件大小超过限制（最大 ${MAX_FILE_SIZE / 1024 / 1024}MB）` })
       return
     }
     if (error.code === 'LIMIT_FILE_COUNT' || error.code === 'LIMIT_UNEXPECTED_FILE') {

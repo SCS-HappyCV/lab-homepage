@@ -719,7 +719,7 @@ onUnmounted(() => {
                         />
                         <span class="album-cover-filename">{{ selectedCoverName || '未选择文件' }}</span>
                       </div>
-                      <p class="album-cover-hint">建议横版 16:10，JPG/PNG/WebP，单张 ≤5MB</p>
+                      <p class="album-cover-hint">建议横版 16:10，JPG/PNG/WebP，单张 ≤20MB</p>
                       <label class="album-featured-field">
                         <input v-model="albumForm.featured" type="checkbox" />
                         <span>在照片墙顶部展示</span>
