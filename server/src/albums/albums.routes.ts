@@ -32,10 +32,20 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
   const router = Router()
   const adminOnly = requireAdmin(authService)
 
+  function safeAlbumDir(id: string): string | null {
+    const sid = String(id ?? '')
+    if (!/^[a-zA-Z0-9_-]+$/.test(sid)) return null
+    return path.join(albumUploadDir, sid)
+  }
+
   const storage = multer.diskStorage({
     destination: async (req, _file, cb) => {
       try {
-        const albumDir = path.join(albumUploadDir, String(req.params.id ?? ''))
+        const albumDir = safeAlbumDir(String(req.params.id ?? ''))
+        if (albumDir === null) {
+          cb(new Error('相册 ID 非法'), '')
+          return
+        }
         await ensureDirectory(albumDir)
         cb(null, albumDir)
       } catch (error) {
@@ -63,6 +73,10 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
   })
 
   router.get('/albums/:id', (req, res) => {
+    if (!safeAlbumDir(String(req.params.id))) {
+      res.status(400).json({ error: '相册 ID 非法' })
+      return
+    }
     const album = repo.get(String(req.params.id))
     if (!album) {
       res.status(404).json({ error: 'Album not found' })
@@ -85,6 +99,10 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
 
   // 改元数据
   router.put('/albums/:id', adminOnly, (req, res) => {
+    if (!safeAlbumDir(String(req.params.id))) {
+      res.status(400).json({ error: '相册 ID 非法' })
+      return
+    }
     try {
       const id = String(req.params.id)
       const updated = repo.update(id, parseAlbumInput(req.body))
@@ -100,6 +118,10 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
 
   // 删相册：DB 级联删照片，再删整个目录
   router.delete('/albums/:id', adminOnly, async (req, res) => {
+    if (!safeAlbumDir(String(req.params.id))) {
+      res.status(400).json({ error: '相册 ID 非法' })
+      return
+    }
     const id = String(req.params.id)
     if (!repo.delete(id)) {
       res.status(404).json({ error: 'Album not found' })
@@ -117,6 +139,11 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
   // 批量上传照片
   router.post('/albums/:id/photos', adminOnly, upload.array('photos', MAX_PHOTOS_PER_BATCH), async (req, res) => {
     const id = String(req.params.id)
+    if (!safeAlbumDir(id)) {
+      await cleanupRawFiles(req.files as Express.Multer.File[] | undefined)
+      res.status(400).json({ error: '相册 ID 非法' })
+      return
+    }
     const files = (req.files as Express.Multer.File[] | undefined) ?? []
     const album = repo.get(id)
     if (!album) {
@@ -130,7 +157,7 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
     }
 
     const created: Array<{ imageUrl: string; thumbUrl: string; caption?: string }> = []
-    const produced: string[] = [] // 已生成的最终文件绝对路径（原图），用于失败回滚
+    const produced: string[] = [] // 已生成的最终文件绝对路径，用于失败回滚
 
     try {
       for (const file of files) {
@@ -139,12 +166,13 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
         const imageAbs = path.join(albumUploadDir, imageRel)
         const thumbAbs = path.join(albumUploadDir, thumbRel)
 
+        // 先把两个目标路径登记下来，这样任一后续步骤抛异常时 catch 都能清理到
+        produced.push(imageAbs, thumbAbs)
         await ensureDirectory(path.dirname(imageAbs))
         await compressImage(file.path, imageAbs)
         await generateThumbnail(imageAbs, thumbAbs)
         await fs.unlink(file.path).catch(() => {})
 
-        produced.push(imageAbs, thumbAbs)
         created.push({
           imageUrl: toAlbumUrl(imageRel),
           thumbUrl: toAlbumUrl(thumbRel),
@@ -155,7 +183,7 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
       res.status(201).json({ photos })
     } catch (error) {
       // 回滚：删除本次已生成的文件；addPhotos 内部已用事务保证 DB 原子性
-      await Promise.all(produced.map((p) => fs.rm(p, { force: true }).catch(() => {})))
+      await Promise.all(produced.map((p) => fs.rm(p, { recursive: true, force: true }).catch(() => {})))
       await cleanupRawFiles(files)
       console.error('Album photo upload error:', error)
       res.status(500).json({ error: '照片上传失败' })
@@ -164,6 +192,10 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
 
   // 照片排序
   router.put('/albums/:id/photos/reorder', adminOnly, (req, res) => {
+    if (!safeAlbumDir(String(req.params.id))) {
+      res.status(400).json({ error: '相册 ID 非法' })
+      return
+    }
     const orderedIds = Array.isArray(req.body?.orderedIds)
       ? req.body.orderedIds.filter((x: unknown): x is string => typeof x === 'string')
       : []
@@ -178,6 +210,11 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
   // 换封面
   router.post('/albums/:id/cover', adminOnly, upload.single('photo'), async (req, res) => {
     const id = String(req.params.id)
+    if (!safeAlbumDir(id)) {
+      await cleanupRawFiles(req.file ? [req.file] : [])
+      res.status(400).json({ error: '相册 ID 非法' })
+      return
+    }
     const album = repo.get(id)
     if (!album) {
       await cleanupRawFiles(req.file ? [req.file] : [])
@@ -189,12 +226,12 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
       return
     }
 
-    try {
-      const coverRel = generateAlbumCoverPath(id)
-      const thumbRel = thumbnailPathFor(coverRel)
-      const coverAbs = path.join(albumUploadDir, coverRel)
-      const thumbAbs = path.join(albumUploadDir, thumbRel)
+    const coverRel = generateAlbumCoverPath(id)
+    const thumbRel = thumbnailPathFor(coverRel)
+    const coverAbs = path.join(albumUploadDir, coverRel)
+    const thumbAbs = path.join(albumUploadDir, thumbRel)
 
+    try {
       await ensureDirectory(path.dirname(coverAbs))
       await compressImage(req.file.path, coverAbs)
       await generateThumbnail(coverAbs, thumbAbs)
@@ -209,7 +246,11 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
 
       res.json(repo.get(id))
     } catch (error) {
-      await fs.unlink(req.file.path).catch(() => {})
+      await Promise.all([
+        fs.unlink(req.file.path).catch(() => {}),
+        ...(coverAbs ? [fs.rm(coverAbs, { force: true }).catch(() => {})] : []),
+        ...(thumbAbs ? [fs.rm(thumbAbs, { force: true }).catch(() => {})] : []),
+      ])
       console.error('Album cover upload error:', error)
       res.status(500).json({ error: '封面上传失败' })
     }
@@ -244,13 +285,15 @@ export function createAlbumRouter({ repo, authService, albumUploadDir }: AlbumRo
       error instanceof multer.MulterError ||
       (error instanceof Error && error.message.includes('不支持的文件类型'))
     ) {
-      const dir = path.join(albumUploadDir, String(req.params.id ?? ''))
-      const files = await fs.readdir(dir).catch(() => [] as string[])
-      await Promise.all(
-        files
-          .filter((f) => f.startsWith('raw-'))
-          .map((f) => fs.unlink(path.join(dir, f)).catch(() => {})),
-      )
+      const dir = safeAlbumDir(String(req.params.id ?? ''))
+      if (dir !== null) {
+        const files = await fs.readdir(dir).catch(() => [] as string[])
+        await Promise.all(
+          files
+            .filter((f) => f.startsWith('raw-'))
+            .map((f) => fs.unlink(path.join(dir, f)).catch(() => {})),
+        )
+      }
     }
     handleUploadError(error, req, res, next)
   })
@@ -320,6 +363,10 @@ function handleWriteError(error: unknown, res: Response): void {
 }
 
 function handleUploadError(error: unknown, _req: Request, res: Response, next: NextFunction): void {
+  if (error instanceof Error && error.message === '相册 ID 非法') {
+    res.status(400).json({ error: error.message })
+    return
+  }
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       res.status(400).json({ error: '文件大小超过限制（最大 5MB）' })

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
@@ -212,6 +212,65 @@ test('reorder updates photo order; caption update works', async () => {
       const after = await request.get(`/albums/${albumId}`).expect(200)
       const target = after.body.photos.find((p: { id: string }) => p.id === first.id)
       assert.equal(target.caption, '新说明')
+    })
+  } finally {
+    rmSync(albumDir, { recursive: true, force: true })
+    rmSync(scratch, { recursive: true, force: true })
+  }
+})
+
+test('batch upload rolls back all produced files when thumbnail generation fails mid-batch', async () => {
+  const albumDir = mkdtempSync(join(tmpdir(), 'album-uploads-'))
+  const scratch = mkdtempSync(join(tmpdir(), 'album-scratch-'))
+  const app = createApp({ config: config({ albumUploadDir: albumDir }) })
+  try {
+    await withTestAgent(app, async (request) => {
+      const token = (await request.post('/auth/login').send({ password: 'secret-passphrase' }).expect(200)).body.token
+      const created = await request.post('/albums').set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Rollback', year: '2025' }).expect(201)
+      const albumId = created.body.id
+      const fixedTs = 1234567890123
+
+      const originalNow = Object.getOwnPropertyDescriptor(Date, 'now')
+      Object.defineProperty(Date, 'now', { value: () => fixedTs, configurable: true })
+
+      try {
+        // 预先在第二张照片的缩略图路径创建一个同名目录，
+        // 使得 generateThumbnail 在 compressImage 成功后因目标为目录而抛出 EISDIR。
+        const secondThumbRel = `${albumId}/thumbs/second-${fixedTs}.webp`
+        mkdirSync(join(albumDir, secondThumbRel), { recursive: true })
+
+        const first = await makeTestJpeg(scratch, 'first.jpg', { r: 200, g: 0, b: 0 })
+        const second = await makeTestJpeg(scratch, 'second.jpg', { r: 0, g: 200, b: 0 })
+
+        const res = await request.post(`/albums/${albumId}/photos`)
+          .set('Authorization', `Bearer ${token}`)
+          .attach('photos', first)
+          .attach('photos', second)
+
+        assert.equal(res.status, 500, 'mid-batch thumbnail failure should return 500')
+
+        const album = await request.get(`/albums/${albumId}`).expect(200)
+        assert.equal(album.body.photos.length, 0, 'no photos should be committed')
+
+        const firstRel = `${albumId}/first-${fixedTs}.jpg`
+        const firstThumbRel = `${albumId}/thumbs/first-${fixedTs}.webp`
+        assert.ok(!existsSync(join(albumDir, firstRel)), 'first original should be rolled back')
+        assert.ok(!existsSync(join(albumDir, firstThumbRel)), 'first thumbnail should be rolled back')
+        assert.ok(!existsSync(join(albumDir, secondThumbRel)), 'second thumbnail obstruction should be rolled back')
+
+        // raw 临时文件也应被清理；空的 thumbs 目录可接受
+        const topFiles = readdirSync(join(albumDir, albumId)).filter((f) => f !== 'thumbs')
+        assert.deepEqual(topFiles, [], 'no raw temp files or produced files should remain')
+        const thumbsDir = join(albumDir, albumId, 'thumbs')
+        if (existsSync(thumbsDir)) {
+          assert.deepEqual(readdirSync(thumbsDir), [], 'thumbs directory should be empty')
+        }
+      } finally {
+        if (originalNow) {
+          Object.defineProperty(Date, 'now', originalNow)
+        }
+      }
     })
   } finally {
     rmSync(albumDir, { recursive: true, force: true })
