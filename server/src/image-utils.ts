@@ -99,3 +99,57 @@ export function generatePhotoPath(cohort: string, studentId: string, prefix = 'p
   const filename = `${studentId}-${prefix}-${suffix}.jpg`
   return path.join(cohort, filename)
 }
+
+/**
+ * 把上传文件名清洗为 ASCII slug：去掉扩展名、转小写、空白转连字符、
+ * 剥离非 [a-z0-9_-] 字符（含中文），截断到 40 字符；结果为空时回退 'photo'。
+ */
+export function slugifyImageName(name: string): string {
+  const base = path
+    .basename(name, path.extname(name))
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9_-]/g, '')
+    .slice(0, 40)
+    .replace(/^-+|-+$/g, '')
+  return base || 'photo'
+}
+
+/**
+ * 生成相册照片的相对存放路径：<albumId>/<slug>-<timestamp>.jpg。
+ * 时间戳保证每次上传都是新 URL，绕过 CDN 缓存。
+ */
+export function generateAlbumPhotoPath(albumId: string, originalName: string, timestamp?: number): string {
+  const slug = slugifyImageName(originalName)
+  const suffix = timestamp ?? Date.now()
+  return path.join(albumId, `${slug}-${suffix}.jpg`)
+}
+
+/**
+ * 生成相册封面的相对存放路径：<albumId>/cover-<timestamp>.jpg。
+ */
+export function generateAlbumCoverPath(albumId: string, timestamp?: number): string {
+  const suffix = timestamp ?? Date.now()
+  return path.join(albumId, `cover-${suffix}.jpg`)
+}
+
+/**
+ * 给定原图相对路径，返回其缩略图相对路径：同级 thumbs/ 目录、同名 .webp。
+ */
+export function thumbnailPathFor(imageRelPath: string): string {
+  const ext = path.extname(imageRelPath)
+  const webp = imageRelPath.slice(0, imageRelPath.length - ext.length) + '.webp'
+  return path.join(path.dirname(webp), 'thumbs', path.basename(webp))
+}
+
+/**
+ * 生成 WebP 缩略图：960×960 fit:inside、不放大、q80，自动按 EXIF 旋转。
+ */
+export async function generateThumbnail(src: string, dest: string): Promise<void> {
+  await ensureDirectory(path.dirname(dest))
+  await sharp(src)
+    .rotate()
+    .resize({ width: 960, height: 960, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 80, effort: 4 })
+    .toFile(dest)
+}
