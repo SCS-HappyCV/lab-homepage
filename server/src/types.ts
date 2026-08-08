@@ -31,4 +31,5 @@ export interface ServerConfig {
   sqlitePath: string
   corsOrigin: string
   uploadDir: string
+  albumUploadDir: string
 }

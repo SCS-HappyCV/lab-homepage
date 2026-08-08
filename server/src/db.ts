@@ -16,6 +16,9 @@ export function openDatabase(sqlitePath: string): AppDatabase {
 }
 
 export function initDatabase(db: AppDatabase) {
+  // node:sqlite 默认关闭外键约束，需显式开启以启用 ON DELETE CASCADE
+  db.exec('PRAGMA foreign_keys = ON')
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS students (
       id TEXT PRIMARY KEY,
@@ -62,6 +65,35 @@ export function initDatabase(db: AppDatabase) {
   } catch {
     // 列已存在，忽略错误
   }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS albums (
+      id          TEXT PRIMARY KEY,
+      title       TEXT NOT NULL,
+      year        TEXT NOT NULL,
+      date        TEXT NOT NULL DEFAULT '',
+      location    TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      categories  TEXT NOT NULL DEFAULT '[]',
+      coverUrl    TEXT NOT NULL DEFAULT '',
+      coverThumb  TEXT NOT NULL DEFAULT '',
+      featured    INTEGER NOT NULL DEFAULT 0,
+      sortOrder   INTEGER NOT NULL DEFAULT 0,
+      createdAt   TEXT NOT NULL,
+      updatedAt   TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS photos (
+      id         TEXT PRIMARY KEY,
+      albumId    TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+      imageUrl   TEXT NOT NULL,
+      thumbUrl   TEXT NOT NULL,
+      caption    TEXT NOT NULL DEFAULT '',
+      sortOrder  INTEGER NOT NULL DEFAULT 0,
+      createdAt  TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_photos_album ON photos(albumId, sortOrder);
+  `)
 
   // 执行专利模块迁移（创建 patents_simple 等表）
   migratePatentTables(db)

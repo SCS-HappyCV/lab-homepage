@@ -12,6 +12,7 @@ export function loadConfig(): ServerConfig {
     sqlitePath: process.env.SQLITE_PATH ?? './data/lab-homepage.db',
     corsOrigin: process.env.CORS_ORIGIN ?? '*',
     uploadDir: process.env.UPLOAD_DIR ?? path.join(process.cwd(), 'data', 'uploads', 'students'),
+    albumUploadDir: process.env.ALBUM_UPLOAD_DIR ?? path.join(process.cwd(), 'data', 'uploads', 'albums'),
   }
 }
 

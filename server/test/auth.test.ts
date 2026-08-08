@@ -13,6 +13,7 @@ function config(): ServerConfig {
     sqlitePath: ':memory:',
     corsOrigin: '*',
     uploadDir: '/tmp/lab-homepage-test-uploads',
+    albumUploadDir: '/tmp/lab-homepage-test-albums',
   }
 }
 
