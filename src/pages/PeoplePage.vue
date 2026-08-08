@@ -112,7 +112,7 @@ const isEditorOpen = ref(false)
 const editorError = ref('')
 const isSavingMember = ref(false)
 const editorForm = ref<MemberForm>(createEmptyForm())
-const labLife = publicAsset('gallery/lab/lab-life.jpg')
+const labLife = publicAsset('cover-students.jpg')
 
 const { isMember } = useAuth()
 
