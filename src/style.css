@@ -2569,17 +2569,17 @@ h3 {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(23, 33, 31, 0.3);
   cursor: pointer;
   transition: background 0.2s, transform 0.2s;
 }
 
 .gallery-hero-dot:hover {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(23, 33, 31, 0.55);
 }
 
 .gallery-hero-dot.active {
-  background: #ffffff;
+  background: var(--ink, #17211f);
   transform: scale(1.15);
 }
 
@@ -2588,6 +2588,18 @@ h3 {
   background:
     linear-gradient(90deg, rgba(9, 24, 22, 0.92), rgba(9, 24, 22, 0.68) 46%, rgba(9, 24, 22, 0.22)),
     linear-gradient(0deg, rgba(9, 24, 22, 0.28), rgba(9, 24, 22, 0.12));
+}
+
+.gallery-hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 130px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(251, 252, 251, 0), #fbfcfb);
 }
 
 .gallery-hero-content {
