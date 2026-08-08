@@ -258,6 +258,31 @@ const heroGallery = computed(() => {
   return featured.length > 0 ? featured : albums.value.slice(0, 3)
 })
 
+// 顶部背景图轮播
+const HERO_SLIDE_INTERVAL = 5000
+const heroSlide = ref(0)
+let heroTimer: ReturnType<typeof setInterval> | null = null
+
+function startHeroCarousel() {
+  stopHeroCarousel()
+  if (heroGallery.value.length <= 1) return
+  heroTimer = setInterval(() => {
+    heroSlide.value = (heroSlide.value + 1) % heroGallery.value.length
+  }, HERO_SLIDE_INTERVAL)
+}
+
+function stopHeroCarousel() {
+  if (heroTimer) {
+    clearInterval(heroTimer)
+    heroTimer = null
+  }
+}
+
+watch(heroGallery, (list) => {
+  if (heroSlide.value >= list.length) heroSlide.value = 0
+  startHeroCarousel()
+})
+
 const filteredAlbums = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
   return albums.value.filter((album) => {
@@ -467,10 +492,12 @@ async function loadAlbums() {
 onMounted(() => {
   void loadAlbums()
   window.addEventListener('keydown', onKeydown)
+  startHeroCarousel()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
+  stopHeroCarousel()
   document.body.style.overflow = ''
 })
 </script>
@@ -480,12 +507,24 @@ onUnmounted(() => {
     <section class="gallery-hero" aria-labelledby="gallery-title">
       <div class="gallery-hero-media">
         <img
-          v-for="album in heroGallery"
+          v-for="(album, index) in heroGallery"
           :key="album.id"
           :src="resolvePhotoUrl(album.coverUrl)"
           :alt="album.title"
           decoding="async"
+          :class="{ 'is-active': index === heroSlide }"
         />
+      </div>
+      <div v-if="heroGallery.length > 1" class="gallery-hero-dots" aria-hidden="true">
+        <button
+          v-for="(album, index) in heroGallery"
+          :key="album.id"
+          type="button"
+          class="gallery-hero-dot"
+          :class="{ active: index === heroSlide }"
+          :aria-label="`切换到第 ${index + 1} 张背景图`"
+          @click="heroSlide = index"
+        ></button>
       </div>
       <div class="gallery-hero-overlay"></div>
       <div class="gallery-hero-content">
