@@ -899,7 +899,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 4px;
 }
 
 .album-cover-preview {
