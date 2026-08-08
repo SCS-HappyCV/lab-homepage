@@ -766,10 +766,6 @@ onUnmounted(() => {
   background: #f8f9fa;
 }
 
-.gallery-toolbar {
-  grid-template-columns: 1fr auto;
-}
-
 .gallery-groups {
   padding-bottom: 80px;
 }
