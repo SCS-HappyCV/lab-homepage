@@ -12,10 +12,17 @@ import {
   ArrowUp,
   ArrowDown,
   RotateCcw,
+  Plus,
+  Pencil,
+  Save,
+  Trash2,
 } from 'lucide-vue-next'
 import { memberApi } from '../utils/api'
 import { resolvePhotoUrl } from '../utils/publicAsset'
-import type { Album, AlbumListItem, Photo } from '../data/gallery/types'
+import { useAuth } from '../utils/useAuth'
+import type { Album, AlbumInput, AlbumListItem, Photo } from '../data/gallery/types'
+
+const { isMember } = useAuth()
 
 const allCategories = '全部'
 
@@ -33,6 +40,169 @@ const selectedAlbum = ref<Album | null>(null)
 const selectedPhoto = ref<Photo | null>(null)
 const photoRatios = ref<Record<string, number>>({})
 const detailLoading = ref(false)
+
+// 相册新建/编辑对话框
+type AlbumEditorMode = 'create' | 'edit'
+interface AlbumFormState {
+  id: string
+  title: string
+  year: string
+  date: string
+  location: string
+  description: string
+  categoriesText: string
+  featured: boolean
+  coverUrl: string
+}
+const albumEditorMode = ref<AlbumEditorMode>('create')
+const isAlbumEditorOpen = ref(false)
+const albumEditorError = ref('')
+const isSavingAlbum = ref(false)
+const isUploadingCover = ref(false)
+const albumForm = ref<AlbumFormState>(createEmptyAlbumForm())
+const coverFileInput = ref<HTMLInputElement | null>(null)
+const selectedCoverName = ref('')
+let pendingCoverFile: File | null = null
+let pendingCoverObjectUrl = ''
+
+function createEmptyAlbumForm(): AlbumFormState {
+  return {
+    id: '',
+    title: '',
+    year: String(new Date().getFullYear()),
+    date: '',
+    location: '',
+    description: '',
+    categoriesText: '',
+    featured: false,
+    coverUrl: '',
+  }
+}
+
+const coverPreviewUrl = computed(() => {
+  if (pendingCoverObjectUrl) return pendingCoverObjectUrl
+  return albumForm.value.coverUrl ? resolvePhotoUrl(albumForm.value.coverUrl) : ''
+})
+
+function resetPendingCover() {
+  pendingCoverFile = null
+  if (pendingCoverObjectUrl) {
+    URL.revokeObjectURL(pendingCoverObjectUrl)
+    pendingCoverObjectUrl = ''
+  }
+  selectedCoverName.value = ''
+  if (coverFileInput.value) coverFileInput.value.value = ''
+}
+
+function openCreateAlbum() {
+  albumEditorMode.value = 'create'
+  albumForm.value = createEmptyAlbumForm()
+  resetPendingCover()
+  albumEditorError.value = ''
+  isAlbumEditorOpen.value = true
+}
+
+function openEditAlbum(album: AlbumListItem) {
+  albumEditorMode.value = 'edit'
+  albumForm.value = {
+    id: album.id,
+    title: album.title,
+    year: album.year,
+    date: album.date,
+    location: album.location,
+    description: album.description,
+    categoriesText: album.categories.join('\n'),
+    featured: album.featured,
+    coverUrl: album.coverUrl,
+  }
+  resetPendingCover()
+  albumEditorError.value = ''
+  isAlbumEditorOpen.value = true
+}
+
+function closeAlbumEditor() {
+  isAlbumEditorOpen.value = false
+  albumEditorError.value = ''
+  resetPendingCover()
+}
+
+function onCoverFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (pendingCoverObjectUrl) URL.revokeObjectURL(pendingCoverObjectUrl)
+  pendingCoverFile = file
+  pendingCoverObjectUrl = URL.createObjectURL(file)
+  selectedCoverName.value = file.name
+}
+
+function categoriesFromText(text: string): string[] {
+  return text
+    .split(/[\n,，]/)
+    .map((c) => c.trim())
+    .filter(Boolean)
+}
+
+async function saveAlbum() {
+  albumEditorError.value = ''
+  const title = albumForm.value.title.trim()
+  const year = albumForm.value.year.trim()
+  if (!title || !year) {
+    albumEditorError.value = '请填写标题和年份'
+    return
+  }
+
+  const input: AlbumInput = {
+    title,
+    year,
+    date: albumForm.value.date.trim(),
+    location: albumForm.value.location.trim(),
+    description: albumForm.value.description.trim(),
+    categories: categoriesFromText(albumForm.value.categoriesText),
+    featured: albumForm.value.featured,
+  }
+
+  isSavingAlbum.value = true
+  try {
+    let albumId = albumForm.value.id
+    if (albumEditorMode.value === 'create') {
+      const created = await memberApi.createAlbum(input)
+      albumId = created.id
+    } else {
+      await memberApi.updateAlbum(albumId, input)
+    }
+    if (pendingCoverFile && albumId) {
+      isUploadingCover.value = true
+      await memberApi.uploadAlbumCover(albumId, pendingCoverFile)
+    }
+    closeAlbumEditor()
+    await loadAlbums()
+    if (albumId && selectedAlbum.value?.id === albumId) {
+      selectedAlbum.value = await memberApi.getAlbum(albumId)
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    albumEditorError.value = message ? `保存失败：${message}` : '保存失败，请稍后重试。'
+  } finally {
+    isSavingAlbum.value = false
+    isUploadingCover.value = false
+  }
+}
+
+async function deleteAlbum(album: { id: string; title: string }) {
+  if (!window.confirm(`确认删除相册「${album.title}」吗？该相册的全部照片将被一并删除。`)) return
+  try {
+    await memberApi.deleteAlbum(album.id)
+    if (selectedAlbum.value?.id === album.id) {
+      selectedAlbum.value = null
+      selectedPhoto.value = null
+    }
+    closeAlbumEditor()
+    await loadAlbums()
+  } catch {
+    albumEditorError.value = '删除失败，请确认登录状态有效后重试。'
+  }
+}
 
 const categories = computed(() => {
   const set = new Set<string>()
@@ -118,7 +288,6 @@ function resetFilters() {
 async function openAlbum(album: AlbumListItem) {
   selectedAlbum.value = { ...album, photos: [] } as unknown as Album
   selectedPhoto.value = null
-  document.body.style.overflow = 'hidden'
   detailLoading.value = true
   try {
     selectedAlbum.value = await memberApi.getAlbum(album.id)
@@ -132,7 +301,6 @@ async function openAlbum(album: AlbumListItem) {
 function closeAlbum() {
   selectedAlbum.value = null
   selectedPhoto.value = null
-  document.body.style.overflow = ''
 }
 
 function openPhoto(photo: Photo) {
@@ -161,6 +329,7 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     if (selectedPhoto.value) closePhoto()
     else if (selectedAlbum.value) closeAlbum()
+    else if (isAlbumEditorOpen.value) closeAlbumEditor()
   } else if (selectedPhoto.value) {
     if (e.key === 'ArrowLeft') prevPhoto()
     if (e.key === 'ArrowRight') nextPhoto()
@@ -184,6 +353,14 @@ watch(
         if (!photoRatios.value[photo.id]) updatePhotoRatio(photo)
       })
     })
+  },
+  { immediate: true },
+)
+
+watch(
+  [selectedAlbum, selectedPhoto, isAlbumEditorOpen],
+  ([album, photo, editor]) => {
+    document.body.style.overflow = album || photo || editor ? 'hidden' : ''
   },
   { immediate: true },
 )
@@ -232,16 +409,27 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <div class="people-directory">
+    <section class="people-directory" aria-label="相册列表">
+      <div class="directory-toolbar gallery-toolbar">
+        <div>
+          <p class="section-kicker">Gallery</p>
+          <h2>照片墙</h2>
+          <p v-if="apiError" class="api-state warning">{{ apiError }}</p>
+        </div>
+        <div class="toolbar-actions">
+          <button v-if="isMember" class="member-create-btn" type="button" @click="openCreateAlbum">
+            <Plus :size="16" />
+            <span>新建相册</span>
+          </button>
+          <label class="people-search toolbar-search">
+            <Search :size="18" />
+            <input v-model="searchText" type="search" placeholder="搜索相册、地点..." />
+          </label>
+        </div>
+      </div>
+
       <div class="cohort-layout">
         <aside class="filter-panel">
-          <h2 class="filter-panel-main-title">照片墙</h2>
-
-          <div class="filter-panel-search">
-            <Search :size="16" />
-            <input v-model="searchText" type="text" placeholder="搜索相册、地点..." />
-          </div>
-
           <div class="filter-group">
             <span class="filter-group-label filter-group-label-lg">排序</span>
             <button
@@ -303,8 +491,6 @@ onUnmounted(() => {
             <RotateCcw :size="14" />
             清除筛选
           </button>
-
-          <p v-if="apiError" class="api-state warning">{{ apiError }}</p>
         </aside>
 
         <div v-if="isLoading" class="member-groups gallery-groups gallery-empty">
@@ -345,6 +531,15 @@ onUnmounted(() => {
                     <Images :size="14" />
                     {{ album.photosCount }}
                   </span>
+                  <button
+                    v-if="isMember"
+                    type="button"
+                    class="album-card-edit"
+                    aria-label="编辑相册"
+                    @click.stop="openEditAlbum(album)"
+                  >
+                    <Pencil :size="14" />
+                  </button>
                 </div>
                 <div class="event-card-body">
                   <h3 class="event-card-title">{{ album.title }}</h3>
@@ -364,7 +559,135 @@ onUnmounted(() => {
           </section>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- Album Create/Edit Modal -->
+    <Transition name="fade">
+      <div v-if="isAlbumEditorOpen" class="editor-portal">
+        <div class="editor-backdrop" @click="closeAlbumEditor"></div>
+        <aside
+          class="member-editor-card"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="albumEditorMode === 'create' ? '新建相册' : '编辑相册'"
+        >
+          <form class="member-editor-form" @submit.prevent="saveAlbum">
+            <div class="editor-header">
+              <div class="editor-heading">
+                <h2>{{ albumEditorMode === 'create' ? '新建相册' : '编辑相册' }}</h2>
+              </div>
+              <button class="editor-close" type="button" aria-label="关闭" @click="closeAlbumEditor">
+                <X :size="22" />
+              </button>
+            </div>
+
+            <div class="editor-body">
+              <div class="editor-section">
+                <div class="editor-fields">
+                  <label class="editor-field">
+                    标题 *
+                    <input v-model="albumForm.title" type="text" required maxlength="100" />
+                  </label>
+                  <label class="editor-field">
+                    年份 *
+                    <input
+                      v-model="albumForm.year"
+                      type="text"
+                      inputmode="numeric"
+                      placeholder="如 2026"
+                      required
+                      maxlength="4"
+                    />
+                  </label>
+                  <label class="editor-field">
+                    日期
+                    <input
+                      v-model="albumForm.date"
+                      type="text"
+                      placeholder="如 2026-06"
+                      maxlength="20"
+                    />
+                  </label>
+                  <label class="editor-field">
+                    地点
+                    <input
+                      v-model="albumForm.location"
+                      type="text"
+                      placeholder="如 湘潭大学"
+                      maxlength="100"
+                    />
+                  </label>
+                  <label class="editor-field editor-field-wide album-featured-field">
+                    <input v-model="albumForm.featured" type="checkbox" />
+                    <span>在首页照片墙精选展示</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="editor-section">
+                <div class="editor-fields album-editor-fields-single">
+                  <label class="editor-field">
+                    描述
+                    <textarea v-model="albumForm.description" rows="3" maxlength="500"></textarea>
+                  </label>
+                  <label class="editor-field">
+                    分类（每行一个，如“毕业照”）
+                    <textarea v-model="albumForm.categoriesText" rows="2"></textarea>
+                  </label>
+                </div>
+              </div>
+
+              <div class="editor-section">
+                <label class="editor-field">
+                  封面图片
+                  <div class="album-cover-field">
+                    <div class="album-cover-preview">
+                      <img v-if="coverPreviewUrl" :src="coverPreviewUrl" alt="封面预览" />
+                      <span v-else class="album-cover-empty">未选择封面</span>
+                    </div>
+                    <input
+                      ref="coverFileInput"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      class="album-cover-input"
+                      @change="onCoverFileSelected"
+                    />
+                    <p class="album-cover-hint">
+                      {{ selectedCoverName || '建议横版 16:10，JPG/PNG/WebP，≤5MB' }}
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              <p v-if="albumEditorError" class="login-error editor-error">{{ albumEditorError }}</p>
+            </div>
+
+            <div class="editor-footer">
+              <button
+                type="submit"
+                class="login-btn login-btn-confirm"
+                :disabled="isSavingAlbum || isUploadingCover"
+              >
+                <Save :size="17" />
+                {{ isSavingAlbum ? '保存中...' : isUploadingCover ? '上传封面中...' : '保存' }}
+              </button>
+              <button
+                v-if="albumEditorMode === 'edit'"
+                type="button"
+                class="login-btn login-btn-cancel album-delete-btn"
+                @click="deleteAlbum(albumForm)"
+              >
+                <Trash2 :size="16" />
+                删除
+              </button>
+              <button type="button" class="login-btn login-btn-cancel" @click="closeAlbumEditor">
+                取消
+              </button>
+            </div>
+          </form>
+        </aside>
+      </div>
+    </Transition>
 
     <!-- Album Detail Modal -->
     <Transition name="fade">
@@ -443,46 +766,107 @@ onUnmounted(() => {
   background: #f8f9fa;
 }
 
-.filter-panel-main-title {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--ink, #17211f);
-  margin: 0;
-  line-height: 1.2;
-}
-
-.filter-panel-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 9px 12px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid var(--line, #dce5df);
-  transition: border-color 0.2s;
-}
-
-.filter-panel-search:focus-within {
-  border-color: var(--green, #1f7a5a);
-}
-
-.filter-panel-search input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 14px;
-  color: var(--ink, #17211f);
-}
-
-.filter-panel-search input::placeholder {
-  color: var(--muted, #5f6f69);
+.gallery-toolbar {
+  grid-template-columns: 1fr auto;
 }
 
 .gallery-groups {
   padding-bottom: 80px;
 }
+
+.album-card-edit {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.event-card:hover .album-card-edit,
+.album-card-edit:focus-visible {
+  opacity: 1;
+}
+
+.album-card-edit:hover {
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.album-editor-fields-single {
+  grid-template-columns: 1fr;
+}
+
+.album-featured-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.album-featured-field input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--green, #1d8163);
+}
+
+.album-cover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.album-cover-preview {
+  width: min(280px, 100%);
+  aspect-ratio: 16 / 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px dashed var(--line, #dce5df);
+  background: #f4f7f5;
+  overflow: hidden;
+}
+
+.album-cover-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.album-cover-empty {
+  color: var(--muted, #5f6f69);
+  font-size: 13px;
+}
+
+.album-cover-input {
+  font-size: 13px;
+}
+
+.album-cover-hint {
+  margin: 0;
+  color: var(--muted, #5f6f69);
+  font-size: 12px;
+}
+
+.album-delete-btn {
+  flex: 0 0 auto;
+  color: #c0392b !important;
+}
+
 
 .gallery-groups.gallery-empty {
   align-items: center;
