@@ -16,10 +16,12 @@ import {
   Pencil,
   Save,
   Trash2,
+  Upload,
 } from 'lucide-vue-next'
 import { memberApi } from '../utils/api'
 import { resolvePhotoUrl } from '../utils/publicAsset'
 import { useAuth } from '../utils/useAuth'
+import DatePicker from '../components/DatePicker.vue'
 import type { Album, AlbumInput, AlbumListItem, Photo } from '../data/gallery/types'
 
 const { isMember } = useAuth()
@@ -50,10 +52,13 @@ interface AlbumFormState {
   date: string
   location: string
   description: string
-  categoriesText: string
+  category: string
   featured: boolean
   coverUrl: string
 }
+
+const ALBUM_CATEGORIES = ['生活照', '毕业照'] as const
+const currentYear = String(new Date().getFullYear())
 const albumEditorMode = ref<AlbumEditorMode>('create')
 const isAlbumEditorOpen = ref(false)
 const albumEditorError = ref('')
@@ -69,11 +74,11 @@ function createEmptyAlbumForm(): AlbumFormState {
   return {
     id: '',
     title: '',
-    year: String(new Date().getFullYear()),
+    year: currentYear,
     date: '',
     location: '',
     description: '',
-    categoriesText: '',
+    category: ALBUM_CATEGORIES[0],
     featured: false,
     coverUrl: '',
   }
@@ -111,7 +116,7 @@ function openEditAlbum(album: AlbumListItem) {
     date: album.date,
     location: album.location,
     description: album.description,
-    categoriesText: album.categories.join('\n'),
+    category: album.categories[0] ?? ALBUM_CATEGORIES[0],
     featured: album.featured,
     coverUrl: album.coverUrl,
   }
@@ -136,29 +141,29 @@ function onCoverFileSelected(event: Event) {
   selectedCoverName.value = file.name
 }
 
-function categoriesFromText(text: string): string[] {
-  return text
-    .split(/[\n,，]/)
-    .map((c) => c.trim())
-    .filter(Boolean)
+function resolveYear(): string {
+  const date = albumForm.value.date.trim()
+  const match = date.match(/^(\d{4})/)
+  if (match) return match[1]
+  const fallback = albumForm.value.year.trim()
+  return fallback || currentYear
 }
 
 async function saveAlbum() {
   albumEditorError.value = ''
   const title = albumForm.value.title.trim()
-  const year = albumForm.value.year.trim()
-  if (!title || !year) {
-    albumEditorError.value = '请填写标题和年份'
+  if (!title) {
+    albumEditorError.value = '请填写标题'
     return
   }
 
   const input: AlbumInput = {
     title,
-    year,
+    year: resolveYear(),
     date: albumForm.value.date.trim(),
     location: albumForm.value.location.trim(),
     description: albumForm.value.description.trim(),
-    categories: categoriesFromText(albumForm.value.categoriesText),
+    categories: albumForm.value.category ? [albumForm.value.category] : [],
     featured: albumForm.value.featured,
   }
 
@@ -583,30 +588,47 @@ onUnmounted(() => {
 
             <div class="editor-body">
               <div class="editor-section">
+                <label class="editor-field">
+                  封面图片
+                  <div class="album-cover-field">
+                    <div class="album-cover-preview">
+                      <img v-if="coverPreviewUrl" :src="coverPreviewUrl" alt="封面预览" />
+                      <span v-else class="album-cover-empty">未选择封面</span>
+                    </div>
+                    <div class="album-cover-actions">
+                      <label class="album-cover-pick">
+                        <Upload :size="15" />
+                        选择文件
+                        <input
+                          ref="coverFileInput"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          class="album-cover-input"
+                          @change="onCoverFileSelected"
+                        />
+                      </label>
+                      <span class="album-cover-filename">{{ selectedCoverName || '未选择文件' }}</span>
+                    </div>
+                    <p class="album-cover-hint">建议横版 16:10，JPG/PNG/WebP，单张 ≤5MB</p>
+                    <label class="album-featured-field">
+                      <input v-model="albumForm.featured" type="checkbox" />
+                      <span>在照片墙顶部展示</span>
+                    </label>
+                  </div>
+                </label>
+              </div>
+
+              <div class="editor-section">
                 <div class="editor-fields">
                   <label class="editor-field">
                     标题 *
                     <input v-model="albumForm.title" type="text" required maxlength="100" />
                   </label>
                   <label class="editor-field">
-                    年份 *
-                    <input
-                      v-model="albumForm.year"
-                      type="text"
-                      inputmode="numeric"
-                      placeholder="如 2026"
-                      required
-                      maxlength="4"
-                    />
-                  </label>
-                  <label class="editor-field">
-                    日期
-                    <input
-                      v-model="albumForm.date"
-                      type="text"
-                      placeholder="如 2026-06"
-                      maxlength="20"
-                    />
+                    分类
+                    <select v-model="albumForm.category">
+                      <option v-for="c in ALBUM_CATEGORIES" :key="c" :value="c">{{ c }}</option>
+                    </select>
                   </label>
                   <label class="editor-field">
                     地点
@@ -617,45 +639,17 @@ onUnmounted(() => {
                       maxlength="100"
                     />
                   </label>
-                  <label class="editor-field editor-field-wide album-featured-field">
-                    <input v-model="albumForm.featured" type="checkbox" />
-                    <span>在首页照片墙精选展示</span>
-                  </label>
-                </div>
-              </div>
-
-              <div class="editor-section">
-                <div class="editor-fields album-editor-fields-single">
                   <label class="editor-field">
-                    描述
-                    <textarea v-model="albumForm.description" rows="3" maxlength="500"></textarea>
-                  </label>
-                  <label class="editor-field">
-                    分类（每行一个，如“毕业照”）
-                    <textarea v-model="albumForm.categoriesText" rows="2"></textarea>
+                    日期
+                    <DatePicker v-model="albumForm.date" />
                   </label>
                 </div>
               </div>
 
               <div class="editor-section">
                 <label class="editor-field">
-                  封面图片
-                  <div class="album-cover-field">
-                    <div class="album-cover-preview">
-                      <img v-if="coverPreviewUrl" :src="coverPreviewUrl" alt="封面预览" />
-                      <span v-else class="album-cover-empty">未选择封面</span>
-                    </div>
-                    <input
-                      ref="coverFileInput"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      class="album-cover-input"
-                      @change="onCoverFileSelected"
-                    />
-                    <p class="album-cover-hint">
-                      {{ selectedCoverName || '建议横版 16:10，JPG/PNG/WebP，≤5MB' }}
-                    </p>
-                  </div>
+                  相册描述
+                  <textarea v-model="albumForm.description" rows="3" maxlength="500"></textarea>
                 </label>
               </div>
 
@@ -799,16 +793,17 @@ onUnmounted(() => {
   background: rgba(0, 0, 0, 0.78);
 }
 
-.album-editor-fields-single {
-  grid-template-columns: 1fr;
-}
-
 .album-featured-field {
-  display: flex;
+  display: inline-flex;
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  grid-column: 1 / -1;
+  width: fit-content;
+  margin-top: 4px;
+  color: var(--ink, #17211f);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .album-featured-field input[type='checkbox'] {
@@ -848,8 +843,42 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
-.album-cover-input {
+.album-cover-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.album-cover-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  min-height: 36px;
+  border: 1px solid var(--green, #1d8163);
+  border-radius: 8px;
+  color: var(--green, #1d8163);
+  background: #ffffff;
   font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.album-cover-pick:hover {
+  background: var(--green, #1d8163);
+  color: #ffffff;
+}
+
+.album-cover-input {
+  display: none;
+}
+
+.album-cover-filename {
+  color: var(--muted, #5f6f69);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .album-cover-hint {
