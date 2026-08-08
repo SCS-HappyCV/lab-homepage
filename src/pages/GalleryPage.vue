@@ -8,51 +8,55 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Plus,
-  Save,
   ImageOff,
   ArrowUp,
   ArrowDown,
   RotateCcw,
-  Pencil,
 } from 'lucide-vue-next'
-import { galleryEvents, galleryCategories, galleryYears } from '../data/gallery'
-import { labImage } from '../data/gallery/helpers'
-import type { GalleryEvent, GalleryPhoto } from '../data/gallery/types'
+import { memberApi } from '../utils/api'
+import { resolvePhotoUrl } from '../utils/publicAsset'
+import type { Album, AlbumListItem, Photo } from '../data/gallery/types'
 
-const CUSTOM_EVENTS_KEY = 'gallery-custom-events'
 const allCategories = '全部'
 
 type SortOrder = 'desc' | 'asc'
 
-const customEvents = ref<GalleryEvent[]>([])
+const albums = ref<AlbumListItem[]>([])
+const isLoading = ref(false)
+const apiError = ref('')
+
 const activeCategories = ref<string[]>([allCategories])
 const activeYear = ref('全部')
 const searchText = ref('')
 const sortOrder = ref<SortOrder>('desc')
-const selectedEvent = ref<GalleryEvent | null>(null)
-const selectedPhoto = ref<GalleryPhoto | null>(null)
+const selectedAlbum = ref<Album | null>(null)
+const selectedPhoto = ref<Photo | null>(null)
 const photoRatios = ref<Record<string, number>>({})
+const detailLoading = ref(false)
 
-const isEditorOpen = ref(false)
-const editorError = ref('')
-const editorForm = ref(createEmptyForm())
-
-const allEvents = computed(() => [...galleryEvents, ...customEvents.value])
-
-const heroGallery = computed(() => {
-  const featured = allEvents.value.filter((event) => event.categories.includes('精选')).slice(0, 3)
-  return featured.length > 0 ? featured : allEvents.value.slice(0, 3)
+const categories = computed(() => {
+  const set = new Set<string>()
+  albums.value.forEach((album) => album.categories.forEach((c) => set.add(c)))
+  return [allCategories, ...Array.from(set).sort()]
 })
 
-const filteredEvents = computed(() => {
+const years = computed(() =>
+  Array.from(new Set(albums.value.map((album) => album.year))).sort((a, b) => Number(b) - Number(a)),
+)
+
+const heroGallery = computed(() => {
+  const featured = albums.value.filter((album) => album.featured).slice(0, 3)
+  return featured.length > 0 ? featured : albums.value.slice(0, 3)
+})
+
+const filteredAlbums = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
-  return allEvents.value.filter((event) => {
+  return albums.value.filter((album) => {
     const matchesCategory =
       activeCategories.value.includes(allCategories) ||
-      activeCategories.value.some((category) => event.categories.includes(category))
-    const matchesYear = activeYear.value === '全部' || event.year === activeYear.value
-    const text = [event.title, event.year, event.location, event.date, ...(event.categories || [])]
+      activeCategories.value.some((category) => album.categories.includes(category))
+    const matchesYear = activeYear.value === '全部' || album.year === activeYear.value
+    const text = [album.title, album.year, album.location, album.date, ...(album.categories || [])]
       .filter(Boolean)
       .join(' ')
       .toLowerCase()
@@ -60,28 +64,26 @@ const filteredEvents = computed(() => {
   })
 })
 
-const categories = computed(() => [allCategories, ...galleryCategories])
-
-const sortedEvents = computed(() => {
-  const events = [...filteredEvents.value]
-  events.sort((a, b) => {
+const sortedAlbums = computed(() => {
+  const list = [...filteredAlbums.value]
+  list.sort((a, b) => {
     const order = sortOrder.value === 'asc' ? 1 : -1
     const dateDiff = (a.date || '').localeCompare(b.date || '')
     if (dateDiff !== 0) return dateDiff * order
     return a.year.localeCompare(b.year) * order
   })
-  return events
+  return list
 })
 
-const groupedEvents = computed(() => {
-  const groups = new Map<string, GalleryEvent[]>()
-  sortedEvents.value.forEach((event) => {
-    if (!groups.has(event.year)) groups.set(event.year, [])
-    groups.get(event.year)!.push(event)
+const groupedAlbums = computed(() => {
+  const groups = new Map<string, AlbumListItem[]>()
+  sortedAlbums.value.forEach((album) => {
+    if (!groups.has(album.year)) groups.set(album.year, [])
+    groups.get(album.year)!.push(album)
   })
   return Array.from(groups.entries())
     .sort(([a], [b]) => b.localeCompare(a))
-    .map(([year, events]) => ({ year, events }))
+    .map(([year, list]) => ({ year, events: list }))
 })
 
 const activeFiltersCount = computed(() => {
@@ -90,16 +92,6 @@ const activeFiltersCount = computed(() => {
   if (activeYear.value !== '全部') count += 1
   if (searchText.value.trim().length > 0) count += 1
   return count
-})
-
-const stats = computed(() => {
-  const photoCount = allEvents.value.reduce((sum, event) => sum + event.photos.length, 0)
-  return {
-    eventCount: allEvents.value.length,
-    photoCount,
-    categoryCount: galleryCategories.length,
-    yearCount: galleryYears.length,
-  }
 })
 
 function toggleCategorySelection(category: string) {
@@ -123,19 +115,27 @@ function resetFilters() {
   sortOrder.value = 'desc'
 }
 
-function openEvent(event: GalleryEvent) {
-  selectedEvent.value = event
+async function openAlbum(album: AlbumListItem) {
+  selectedAlbum.value = { ...album, photos: [] } as unknown as Album
   selectedPhoto.value = null
   document.body.style.overflow = 'hidden'
+  detailLoading.value = true
+  try {
+    selectedAlbum.value = await memberApi.getAlbum(album.id)
+  } catch {
+    apiError.value = '相册照片加载失败，请稍后重试。'
+  } finally {
+    detailLoading.value = false
+  }
 }
 
-function closeEvent() {
-  selectedEvent.value = null
+function closeAlbum() {
+  selectedAlbum.value = null
   selectedPhoto.value = null
   document.body.style.overflow = ''
 }
 
-function openPhoto(photo: GalleryPhoto) {
+function openPhoto(photo: Photo) {
   selectedPhoto.value = photo
 }
 
@@ -144,15 +144,15 @@ function closePhoto() {
 }
 
 function prevPhoto() {
-  if (!selectedEvent.value || !selectedPhoto.value) return
-  const photos = selectedEvent.value.photos
+  if (!selectedAlbum.value || !selectedPhoto.value) return
+  const photos = selectedAlbum.value.photos
   const index = photos.findIndex((p) => p.id === selectedPhoto.value!.id)
   selectedPhoto.value = index > 0 ? photos[index - 1] : photos[photos.length - 1]
 }
 
 function nextPhoto() {
-  if (!selectedEvent.value || !selectedPhoto.value) return
-  const photos = selectedEvent.value.photos
+  if (!selectedAlbum.value || !selectedPhoto.value) return
+  const photos = selectedAlbum.value.photos
   const index = photos.findIndex((p) => p.id === selectedPhoto.value!.id)
   selectedPhoto.value = index < photos.length - 1 ? photos[index + 1] : photos[0]
 }
@@ -160,24 +160,23 @@ function nextPhoto() {
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     if (selectedPhoto.value) closePhoto()
-    else if (selectedEvent.value) closeEvent()
-    else if (isEditorOpen.value) closeEditor()
+    else if (selectedAlbum.value) closeAlbum()
   } else if (selectedPhoto.value) {
     if (e.key === 'ArrowLeft') prevPhoto()
     if (e.key === 'ArrowRight') nextPhoto()
   }
 }
 
-function updatePhotoRatio(photo: GalleryPhoto) {
+function updatePhotoRatio(photo: Photo) {
   const img = new Image()
   img.onload = () => {
     photoRatios.value[photo.id] = img.naturalWidth / img.naturalHeight
   }
-  img.src = photo.image
+  img.src = resolvePhotoUrl(photo.imageUrl)
 }
 
 watch(
-  () => selectedEvent.value?.photos,
+  () => selectedAlbum.value?.photos,
   (photos) => {
     if (!photos) return
     nextTick(() => {
@@ -189,148 +188,21 @@ watch(
   { immediate: true },
 )
 
-function createEmptyForm() {
-  return {
-    id: '',
-    title: '',
-    year: String(new Date().getFullYear()),
-    categoriesText: '',
-    date: '',
-    location: '',
-    description: '',
-    coverFile: '',
-    photosText: '',
-  }
-}
-
-function fillFormFromEvent(event: GalleryEvent) {
-  editorForm.value = {
-    id: event.id,
-    title: event.title,
-    year: event.year,
-    categoriesText: event.categories.join(', '),
-    date: event.date,
-    location: event.location,
-    description: event.description,
-    coverFile: event.coverImage ? event.coverImage.split('/').pop() || '' : '',
-    photosText: event.photos.map((p) => p.image.split('/').pop() || '').join('\n'),
-  }
-}
-
-function isCustomEvent(event: GalleryEvent) {
-  return event.id.startsWith('custom-')
-}
-
-function openCreateEditor() {
-  editorForm.value = createEmptyForm()
-  editorError.value = ''
-  isEditorOpen.value = true
-}
-
-function openEditEditor(event: GalleryEvent) {
-  if (!isCustomEvent(event)) return
-  fillFormFromEvent(event)
-  editorError.value = ''
-  isEditorOpen.value = true
-}
-
-function closeEditor() {
-  isEditorOpen.value = false
-  editorError.value = ''
-}
-
-function saveCustomEvent() {
-  editorError.value = ''
-
-  const categories = editorForm.value.categoriesText
-    .split(/[,，]/)
-    .map((c) => c.trim())
-    .filter(Boolean)
-
-  if (!editorForm.value.title || !editorForm.value.year || categories.length === 0) {
-    editorError.value = '标题、年份和分类为必填项。'
-    return
-  }
-
-  const photoFileNames = editorForm.value.photosText
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-
-  if (photoFileNames.length === 0) {
-    editorError.value = '请至少填写一张照片文件名。'
-    return
-  }
-
-  const coverFile = editorForm.value.coverFile.trim() || photoFileNames[0]
-  const year = editorForm.value.year.trim()
-
-  const photos: GalleryPhoto[] = photoFileNames.map((fileName, index) => {
-    const { image, thumbnail } = labImage(year, fileName)
-    return {
-      id: `${year}-${fileName.replace(/\.[^.]+$/, '')}-${index}-${Date.now()}`,
-      image,
-      thumbnail,
-    }
-  })
-
-  const cover = labImage(year, coverFile)
-
-  const event: GalleryEvent = {
-    id: editorForm.value.id || `custom-${Date.now()}`,
-    year,
-    categories,
-    title: editorForm.value.title.trim(),
-    date: editorForm.value.date.trim(),
-    location: editorForm.value.location.trim(),
-    description: editorForm.value.description.trim(),
-    coverImage: cover.image,
-    coverThumbnail: cover.thumbnail,
-    photos,
-  }
-
-  if (editorForm.value.id) {
-    const index = customEvents.value.findIndex((e) => e.id === editorForm.value.id)
-    if (index !== -1) {
-      customEvents.value[index] = event
-    } else {
-      customEvents.value.push(event)
-    }
-  } else {
-    customEvents.value.push(event)
-  }
-
-  persistCustomEvents()
-  closeEditor()
-
-  if (selectedEvent.value?.id === event.id) {
-    selectedEvent.value = event
-  }
-}
-
-function deleteCustomEvent(event: GalleryEvent) {
-  if (!isCustomEvent(event)) return
-  if (!window.confirm(`确认删除相册「${event.title}」吗？`)) return
-  customEvents.value = customEvents.value.filter((e) => e.id !== event.id)
-  persistCustomEvents()
-  if (selectedEvent.value?.id === event.id) closeEvent()
-}
-
-function persistCustomEvents() {
-  localStorage.setItem(CUSTOM_EVENTS_KEY, JSON.stringify(customEvents.value))
-}
-
-function loadCustomEvents() {
+async function loadAlbums() {
+  isLoading.value = true
+  apiError.value = ''
   try {
-    const raw = localStorage.getItem(CUSTOM_EVENTS_KEY)
-    if (raw) customEvents.value = JSON.parse(raw)
+    albums.value = await memberApi.listAlbums()
   } catch {
-    customEvents.value = []
+    apiError.value = '相册数据服务暂时不可用，请稍后刷新重试。'
+    albums.value = []
+  } finally {
+    isLoading.value = false
   }
 }
 
 onMounted(() => {
-  loadCustomEvents()
+  void loadAlbums()
   window.addEventListener('keydown', onKeydown)
 })
 
@@ -345,10 +217,10 @@ onUnmounted(() => {
     <section class="gallery-hero" aria-labelledby="gallery-title">
       <div class="gallery-hero-media">
         <img
-          v-for="event in heroGallery"
-          :key="event.id"
-          :src="event.coverImage"
-          :alt="event.title"
+          v-for="album in heroGallery"
+          :key="album.id"
+          :src="resolvePhotoUrl(album.coverUrl)"
+          :alt="album.title"
           decoding="async"
         />
       </div>
@@ -411,7 +283,7 @@ onUnmounted(() => {
                 全部
               </button>
               <button
-                v-for="year in galleryYears"
+                v-for="year in years"
                 :key="year"
                 type="button"
                 :class="['filter-pill', { active: activeYear === year }]"
@@ -432,74 +304,60 @@ onUnmounted(() => {
             清除筛选
           </button>
 
-          <button class="member-create-btn" type="button" @click="openCreateEditor">
-            <Plus :size="18" />
-            新建相册
-          </button>
+          <p v-if="apiError" class="api-state warning">{{ apiError }}</p>
         </aside>
 
-        <div v-if="groupedEvents.length === 0" class="member-groups gallery-groups gallery-empty">
+        <div v-if="isLoading" class="member-groups gallery-groups gallery-empty">
+          <p>正在加载相册…</p>
+        </div>
+
+        <div v-else-if="groupedAlbums.length === 0" class="member-groups gallery-groups gallery-empty">
           <ImageOff :size="48" />
           <p>没有找到匹配的相册</p>
           <button class="btn-clear" @click="resetFilters">清除筛选</button>
         </div>
 
         <div v-else class="member-groups gallery-groups">
-          <section v-for="group in groupedEvents" :key="group.year" class="member-group">
+          <section v-for="group in groupedAlbums" :key="group.year" class="member-group">
             <div class="member-group-heading">
               <h3>{{ group.year }}</h3>
               <span>{{ group.events.length }} 个相册</span>
             </div>
             <div class="events-grid">
               <article
-                v-for="event in group.events"
-                :key="event.id"
+                v-for="album in group.events"
+                :key="album.id"
                 class="event-card"
-                @click="openEvent(event)"
+                @click="openAlbum(album)"
               >
                 <div class="event-card-image">
-                  <img :src="event.coverThumbnail || event.coverImage" :alt="event.title" loading="lazy" />
+                  <img
+                    :src="resolvePhotoUrl(album.coverThumb || album.coverUrl)"
+                    :alt="album.title"
+                    loading="lazy"
+                  />
                   <div class="event-card-tags">
-                    <span v-for="category in event.categories.slice(0, 2)" :key="category" class="event-card-tag">
+                    <span v-for="category in album.categories.slice(0, 2)" :key="category" class="event-card-tag">
                       {{ category }}
                     </span>
                   </div>
                   <span class="event-card-count">
                     <Images :size="14" />
-                    {{ event.photos.length }}
+                    {{ album.photosCount }}
                   </span>
                 </div>
                 <div class="event-card-body">
-                  <h3 class="event-card-title">{{ event.title }}</h3>
+                  <h3 class="event-card-title">{{ album.title }}</h3>
                   <div class="event-card-meta">
-                    <span><Calendar :size="14" /> {{ event.date }}</span>
-                    <span><MapPin :size="14" /> {{ event.location }}</span>
+                    <span><Calendar :size="14" /> {{ album.date }}</span>
+                    <span><MapPin :size="14" /> {{ album.location }}</span>
                   </div>
-                  <p v-if="event.description" class="event-card-desc">{{ event.description }}</p>
+                  <p v-if="album.description" class="event-card-desc">{{ album.description }}</p>
                   <div class="event-card-categories">
-                    <span v-for="category in event.categories" :key="category" class="event-category-chip">
+                    <span v-for="category in album.categories" :key="category" class="event-category-chip">
                       {{ category }}
                     </span>
                   </div>
-                </div>
-
-                <div v-if="isCustomEvent(event)" class="event-card-actions">
-                  <button
-                    class="event-card-action-btn"
-                    type="button"
-                    title="编辑相册"
-                    @click.stop="openEditEditor(event)"
-                  >
-                    <Pencil :size="14" />
-                  </button>
-                  <button
-                    class="event-card-action-btn event-card-action-delete"
-                    type="button"
-                    title="删除相册"
-                    @click.stop="deleteCustomEvent(event)"
-                  >
-                    <X :size="14" />
-                  </button>
                 </div>
               </article>
             </div>
@@ -508,54 +366,37 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Event Detail Modal -->
+    <!-- Album Detail Modal -->
     <Transition name="fade">
-      <div v-if="selectedEvent" class="event-modal" @click.self="closeEvent">
+      <div v-if="selectedAlbum" class="event-modal" @click.self="closeAlbum">
         <div class="event-modal-panel">
           <header class="event-modal-header">
             <div class="event-modal-title">
               <div class="event-modal-categories">
-                <span v-for="category in selectedEvent.categories" :key="category" class="event-modal-category">
+                <span v-for="category in selectedAlbum.categories" :key="category" class="event-modal-category">
                   {{ category }}
                 </span>
               </div>
-              <h2>{{ selectedEvent.title }}</h2>
+              <h2>{{ selectedAlbum.title }}</h2>
               <div class="event-modal-meta">
-                <span><Calendar :size="14" /> {{ selectedEvent.date }}</span>
-                <span><MapPin :size="14" /> {{ selectedEvent.location }}</span>
-                <span><Images :size="14" /> {{ selectedEvent.photos.length }} 张照片</span>
+                <span><Calendar :size="14" /> {{ selectedAlbum.date }}</span>
+                <span><MapPin :size="14" /> {{ selectedAlbum.location }}</span>
+                <span><Images :size="14" /> {{ selectedAlbum.photos.length }} 张照片</span>
               </div>
             </div>
             <div class="event-modal-actions">
-              <button
-                v-if="isCustomEvent(selectedEvent)"
-                class="event-modal-action-btn"
-                type="button"
-                title="编辑相册"
-                @click="openEditEditor(selectedEvent)"
-              >
-                <Pencil :size="18" />
-              </button>
-              <button
-                v-if="isCustomEvent(selectedEvent)"
-                class="event-modal-action-btn event-modal-action-delete"
-                type="button"
-                title="删除相册"
-                @click="deleteCustomEvent(selectedEvent)"
-              >
-                <X :size="18" />
-              </button>
-              <button class="event-modal-close" @click="closeEvent">
+              <button class="event-modal-close" @click="closeAlbum">
                 <X :size="22" />
               </button>
             </div>
           </header>
 
-          <p v-if="selectedEvent.description" class="event-modal-desc">{{ selectedEvent.description }}</p>
+          <p v-if="selectedAlbum.description" class="event-modal-desc">{{ selectedAlbum.description }}</p>
 
-          <div class="event-photos-grid">
+          <div v-if="detailLoading" class="event-photos-grid">照片加载中…</div>
+          <div v-else class="event-photos-grid">
             <div
-              v-for="photo in selectedEvent.photos"
+              v-for="photo in selectedAlbum.photos"
               :key="photo.id"
               class="event-photo-item"
               :style="{
@@ -563,7 +404,11 @@ onUnmounted(() => {
               }"
               @click="openPhoto(photo)"
             >
-              <img :src="photo.thumbnail || photo.image" :alt="photo.caption || selectedEvent.title" loading="lazy" />
+              <img
+                :src="resolvePhotoUrl(photo.thumbUrl || photo.imageUrl)"
+                :alt="photo.caption || selectedAlbum.title"
+                loading="lazy"
+              />
               <div v-if="photo.caption" class="event-photo-caption">{{ photo.caption }}</div>
             </div>
           </div>
@@ -578,7 +423,7 @@ onUnmounted(() => {
           <ChevronLeft :size="32" />
         </button>
         <div class="lightbox-content">
-          <img :src="selectedPhoto.image" :alt="selectedPhoto.caption || ''" />
+          <img :src="resolvePhotoUrl(selectedPhoto.imageUrl)" :alt="selectedPhoto.caption || ''" />
           <div v-if="selectedPhoto.caption" class="lightbox-caption">{{ selectedPhoto.caption }}</div>
         </div>
         <button class="lightbox-nav lightbox-next" @click.stop="nextPhoto">
@@ -587,78 +432,6 @@ onUnmounted(() => {
         <button class="lightbox-close" @click.stop="closePhoto">
           <X :size="24" />
         </button>
-      </div>
-    </Transition>
-
-    <!-- Create Album Editor -->
-    <Transition name="fade">
-      <div v-if="isEditorOpen" class="editor-portal">
-        <div class="editor-backdrop" @click="closeEditor"></div>
-        <aside class="member-editor-card gallery-editor-card" role="dialog" aria-modal="true" aria-label="新建相册">
-          <form class="member-editor-form" @submit.prevent="saveCustomEvent">
-            <div class="editor-header">
-              <div class="editor-heading"><h2>{{ editorForm.id ? '编辑相册' : '新建相册' }}</h2></div>
-              <button class="editor-close" type="button" aria-label="关闭编辑器" @click="closeEditor">
-                <X :size="22" />
-              </button>
-            </div>
-
-            <div class="editor-body">
-              <div class="editor-grid">
-                <label>
-                  <span>标题 <em class="required-hint">(必填)</em></span>
-                  <input v-model="editorForm.title" type="text" placeholder="例如：2027 届毕业合影" required />
-                </label>
-                <label>
-                  <span>年份 <em class="required-hint">(必填)</em></span>
-                  <input v-model="editorForm.year" type="text" placeholder="2027" required />
-                </label>
-              </div>
-              <label>
-                <span>分类 <em class="required-hint">(必填，多个用逗号分隔)</em></span>
-                <input v-model="editorForm.categoriesText" type="text" placeholder="毕业照" required />
-              </label>
-              <div class="editor-grid">
-                <label>
-                  <span>日期</span>
-                  <input v-model="editorForm.date" type="text" placeholder="2027-06" />
-                </label>
-                <label>
-                  <span>地点</span>
-                  <input v-model="editorForm.location" type="text" placeholder="湘潭大学" />
-                </label>
-              </div>
-              <label>
-                <span>描述</span>
-                <textarea v-model="editorForm.description" rows="3" placeholder="简单描述这个相册的内容..."></textarea>
-              </label>
-              <label>
-                <span>封面文件名</span>
-                <input v-model="editorForm.coverFile" type="text" placeholder="留空则使用第一张照片" />
-              </label>
-              <label>
-                <span>照片文件名 <em class="required-hint">(必填，每行一个)</em></span>
-                <textarea
-                  v-model="editorForm.photosText"
-                  rows="6"
-                  placeholder="DSC_0001.JPG\nDSC_0002.JPG\n..."
-                  required
-                ></textarea>
-              </label>
-              <p class="editor-hint">
-                照片文件需要提前放到 public/gallery/lab/{年份}/ 目录下，缩略图放到 thumbs/ 子目录。
-              </p>
-              <p v-if="editorError" class="login-error">{{ editorError }}</p>
-            </div>
-
-            <div class="editor-footer">
-              <button type="submit" class="login-btn login-btn-confirm">
-                <Save :size="17" /> 保存
-              </button>
-              <button type="button" class="login-btn login-btn-cancel" @click="closeEditor">取消</button>
-            </div>
-          </form>
-        </aside>
       </div>
     </Transition>
   </main>
@@ -707,7 +480,6 @@ onUnmounted(() => {
   color: var(--muted, #5f6f69);
 }
 
-/* Gallery groups */
 .gallery-groups {
   padding-bottom: 80px;
 }
@@ -720,7 +492,6 @@ onUnmounted(() => {
   color: var(--muted, #5f6f69);
 }
 
-/* Filter panel extras */
 .filter-reset {
   width: 100%;
   justify-content: center;
@@ -762,12 +533,6 @@ onUnmounted(() => {
   background: var(--soft, #eef4f0);
 }
 
-.sort-btn-compact.active {
-  color: #ffffff;
-  background: #10201c;
-  border-color: #10201c;
-}
-
 .filter-pill-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -781,12 +546,10 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
-.filter-reset,
-.member-create-btn {
+.filter-reset {
   width: 100%;
 }
 
-/* Events grid inside groups */
 .events-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -911,48 +674,6 @@ onUnmounted(() => {
   font-weight: 700;
 }
 
-.event-card-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.event-card:hover .event-card-actions {
-  opacity: 1;
-}
-
-.event-card-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(31, 122, 90, 0.9);
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.event-card-action-btn:hover {
-  background: var(--green, #1f7a5a);
-}
-
-.event-card-action-delete {
-  background: rgba(224, 49, 49, 0.85);
-}
-
-.event-card-action-delete:hover {
-  background: #e03131;
-}
-
 .btn-clear {
   padding: 8px 18px;
   border-radius: 999px;
@@ -968,7 +689,6 @@ onUnmounted(() => {
   opacity: 0.9;
 }
 
-/* Event Modal */
 .event-modal {
   position: fixed;
   inset: 0;
@@ -1044,34 +764,6 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.event-modal-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: var(--soft, #eef4f0);
-  color: var(--green, #1f7a5a);
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-
-.event-modal-action-btn:hover {
-  background: var(--green, #1f7a5a);
-  color: #ffffff;
-}
-
-.event-modal-action-delete {
-  color: #e03131;
-}
-
-.event-modal-action-delete:hover {
-  background: #e03131;
-  color: #ffffff;
-}
-
 .event-modal-close {
   display: flex;
   align-items: center;
@@ -1141,7 +833,6 @@ onUnmounted(() => {
   opacity: 1;
 }
 
-/* Lightbox */
 .photo-lightbox {
   position: fixed;
   inset: 0;
@@ -1223,19 +914,6 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Editor */
-.gallery-editor-card {
-  width: min(560px, 90vw);
-  height: min(90vh, 760px);
-}
-
-.editor-hint {
-  font-size: 12px;
-  color: var(--muted, #5f6f69);
-  line-height: 1.5;
-  margin-top: 4px;
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.25s ease;
@@ -1246,7 +924,6 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* Responsive */
 @media (max-width: 1024px) {
   .events-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1254,10 +931,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .toolbar-search {
-    width: 100%;
-  }
-
   .events-grid {
     grid-template-columns: 1fr;
   }
