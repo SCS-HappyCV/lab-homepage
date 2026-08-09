@@ -39,6 +39,7 @@ type MemberForm = Omit<StudentProfile, 'research' | 'achievements' | 'experience
 const allCohorts = '全部'
 const allResearchDirections = '全部'
 const allAdvisors = '全部'
+const advisorOptions = ['周维', '许海霞']
 
 // 研究方向按每行两个的固定顺序排列
 const researchDirectionKeywords = ['点云', '大模型', '高光谱', '变化检测', '目标检测', '语义分割']
@@ -402,7 +403,6 @@ function openCreateEditor() {
 function openEditEditor(member: StudentProfile) {
   editorMode.value = 'edit'
   editorForm.value = toForm(member)
-  editorForm.value.advisor = ''
   parseNativePlace(member.nativePlace ?? '')
   parseDestination(member.destination ?? '')
   editorError.value = ''
@@ -963,8 +963,13 @@ onMounted(() => {
                 <span>导师</span>
                 <select v-model="editorForm.advisor">
                   <option value="">请选择</option>
-                  <option value="周维">周维</option>
-                  <option value="许海霞">许海霞</option>
+                  <option
+                    v-if="editorForm.advisor && !advisorOptions.includes(editorForm.advisor)"
+                    :value="editorForm.advisor"
+                  >
+                    {{ editorForm.advisor }}
+                  </option>
+                  <option v-for="a in advisorOptions" :key="a" :value="a">{{ a }}</option>
                 </select>
               </label>
             </div>
@@ -1003,7 +1008,7 @@ onMounted(() => {
             <div class="editor-textareas">
               <label class="editor-field">
                 <span>研究方向（每行一个）</span>
-                <textarea v-model="editorForm.researchText" rows="3"></textarea>
+                <textarea v-model="editorForm.researchText" rows="4"></textarea>
               </label>
               <label class="editor-field">
                 <span>个人简介</span>
