@@ -1,8 +1,8 @@
 # Happy Computer Vision Lab Homepage
 
-实验室主页项目，包含前端展示和后端管理两部分。前端基于 Vue 3 构建，部署在 GitHub Pages；后端基于 Express + SQLite，提供成员管理 API，通过 PM2 部署。
+实验室主页项目，包含前端展示和后端管理两部分。前端基于 Vue 3 构建，构建产物由服务器 nginx 托管；后端基于 Express + SQLite，提供成员管理 API，通过 PM2 部署。
 
-**线上地址**: https://scs-happycv.github.io/lab-homepage/
+**线上地址**: https://www.scs-happycv.top/ （前端） · https://api.scs-happycv.top/ （后端 API）
 
 ---
 
@@ -23,36 +23,60 @@
 
 ---
 
+## 数据来源
+
+- **成员数据**：来自后端 API（`/api/students`），非本地文件。成员照片、背景图由后端上传接口管理，经 Sharp 压缩后存于上传目录。
+- **照片墙数据**：来自后端 API（`/api/albums`），相册与照片通过应用内后台上传管理。
+- 前端 `src/data/` 仅保留类型定义，不再维护静态数据文件。
+
+---
+
 ## 项目结构
 
 ```
 lab-homepage/
 ├── src/                          # 前端源码
 │   ├── components/               # 可复用组件
-│   ├── data/                     # 静态数据层
-│   │   ├── gallery/              # 照片墙数据 (按年份拆分)
-│   │   └── students/             # 成员数据 (按届别拆分)
+│   │   ├── DatePicker.vue        # 日期选择器
+│   │   ├── ImageCropper.vue      # 图片裁剪
+│   │   ├── PhotoUploader.vue     # 成员照片/头像上传
+│   │   ├── PatentModal.vue       # 专利详情弹窗
+│   │   ├── PatentRecognitionConfirm.vue # 专利识别确认
+│   │   └── PatentUploadDialog.vue # 专利上传对话框
+│   ├── data/                     # 类型定义 (真实数据来自后端 API)
+│   │   ├── gallery/types.ts      # 相册 / 照片类型
+│   │   └── students/types.ts     # 成员类型
 │   ├── pages/                    # 页面组件
-│   ├── utils/                    # 工具函数 (API 客户端、认证等)
+│   │   ├── HomePage.vue          # 首页
+│   │   ├── PeoplePage.vue        # 成员页
+│   │   ├── GalleryPage.vue       # 照片墙页
+│   │   └── LoginWindow.vue       # 登录弹窗
+│   ├── utils/                    # 工具函数 (API 客户端、认证、资源路径)
 │   ├── App.vue                   # 根组件
 │   ├── main.ts                   # 入口
 │   ├── router.ts                 # 路由配置
 │   └── style.css                 # 全局样式
 ├── server/                       # 后端服务
 │   ├── src/                      # 服务端源码
-│   │   ├── auth.ts               # 认证中间件
+│   │   ├── auth.ts               # 认证服务 (JWT)
 │   │   ├── config.ts             # 配置加载
 │   │   ├── db.ts                 # 数据库初始化
 │   │   ├── image-utils.ts        # 图片处理
+│   │   ├── index.ts              # Express 应用
+│   │   ├── server.ts             # 服务器启动
 │   │   ├── students.repo.ts      # 成员数据仓库
-│   │   └── students.routes.ts    # 成员 API 路由
+│   │   ├── students.routes.ts    # 成员路由
+│   │   ├── patents.routes.ts     # 专利路由
+│   │   └── patent/               # 专利识别模块
 │   ├── scripts/                  # 数据库脚本
 │   └── test/                     # 后端测试
 ├── public/                       # 静态资源
-│   └── gallery/lab/              # 照片墙图片 + 缩略图
-├── scripts/                      # 前端工具脚本
-├── docs/                         # 构建输出 (GitHub Pages)
-└── .github/workflows/            # CI/CD
+│   ├── cover-home.jpg            # 首页背景图
+│   ├── cover-students.jpg        # 团队成员页背景图
+│   └── favicon.svg
+├── docs/                         # 前端构建输出 (nginx 托管，restart.sh 生成)
+├── restart.sh                    # 一键构建并重启
+└── ecosystem.config.cjs          # PM2 配置
 ```
 
 ---
@@ -81,9 +105,9 @@ npm run dev             # 启动开发服务器 (默认端口 3001)
 
 前端本地开发时，`vite.config.ts` 已配置将 `/uploads` 请求代理到后端。
 
-### 重启
+### 生产部署（服务器）
 
-生产环境使用项目根目录的 [`restart.sh`](restart.sh) 一键重启：
+本项目直接部署在服务器上，不依赖 GitHub Pages。使用项目根目录的 [`restart.sh`](restart.sh) 一键构建并重启：
 
 ```bash
 ./restart.sh
@@ -91,92 +115,25 @@ npm run dev             # 启动开发服务器 (默认端口 3001)
 
 该脚本会依次完成：
 
-1. 构建前端到 `docs/`
-2. 构建后端到 `server/dist/`
+1. 构建前端到 `docs/`（`vite build`，`outDir: docs`）
+2. 构建后端到 `server/dist/`（`tsc`）
 3. 重启 PM2 进程 `lab-homepage-api`
 
-如需手动操作，可执行：
+架构：
 
-```bash
-cd server
-npm install
-npm run build
-pm2 start ../ecosystem.config.cjs
-pm2 save
-```
+- **前端**：构建产物 `docs/` 由 nginx 托管，对外为 `https://www.scs-happycv.top`
+- **后端**：PM2 进程 `lab-homepage-api` 监听 `127.0.0.1:3003`，反向代理对外为 `https://api.scs-happycv.top`
+- 路由使用 Hash 模式，刷新不会 404
 
-配置反向代理将 `https://api.scs-happycv.top` 转发到 `http://127.0.0.1:3003`。
-
-> 多用户管理说明：本项目使用共享 `PM2_HOME=/var/www/lab-homepage/.pm2`。若其他用户（如 `zw403`）也需要执行 `pm2 status`、`pm2 logs` 等命令，需要在其 shell 配置中设置 `PM2_HOME`：
+> 多用户管理说明：本项目使用共享 `PM2_HOME=/var/www/lab-homepage/.pm2`。若其他用户也需要执行 `pm2 status`、`pm2 logs` 等命令，需要在其 shell 配置中设置 `PM2_HOME`：
 > - bash: `export PM2_HOME=/var/www/lab-homepage/.pm2`
 > - fish: `set -x PM2_HOME /var/www/lab-homepage/.pm2`
-
-### 前端部署 (GitHub Actions)
-
-推送到 `main` 分支自动触发构建和部署。确保仓库 Settings → Pages 的 Source 设为 `GitHub Actions`。
-
-构建输出到 `docs/` 目录，路由使用 Hash 模式，刷新不会 404。
 
 验证服务：
 
 ```bash
 curl https://api.scs-happycv.top/health
 pm2 logs lab-homepage-api
-```
-
----
-
-## 照片墙维护
-
-照片墙页 (`/#/gallery`) 数据按年份拆分在 `src/data/gallery/years/` 下。
-
-### 新增照片
-
-编辑对应年份文件，添加一项：
-
-```ts
-{
-  id: '2026-graduation-09',
-  year: '2026',
-  category: '毕业照',
-  title: '2026 届毕业合影',
-  date: '2026-06',
-  location: '湘潭大学信息科技大楼',
-  ...labImage('2026', 'DSC_1900.JPG'),
-  featured: true,
-}
-```
-
-| 字段 | 说明 |
-|---|---|
-| `id` | 唯一标识 |
-| `year` | 年份，决定分组 |
-| `category` | 类型（毕业照 / 生活照 / 组会活动 / 比赛参会） |
-| `title` | 照片标题 |
-| `date` | 日期，推荐 `YYYY-MM` 或 `YYYY-MM-DD` |
-| `location` | 地点 |
-| `featured` | 可选，`true` 表示在首页和照片墙顶部展示 |
-
-年份筛选、类型筛选和年度分组均根据数据自动生成。新增 `category` 后筛选按钮也会自动出现。
-
-### 新增年份
-
-1. 将照片放入 `public/gallery/lab/2027/`
-2. 创建 `src/data/gallery/years/2027.ts`
-3. `index.ts` 自动汇总，无需手动注册
-
-### 缩略图
-
-照片墙默认加载缩略图，点击查看原图。新增或替换原图后运行：
-
-```bash
-npm run thumbs
-```
-
-自动扫描 `public/gallery/lab/` 下的图片，生成 960×960 以内的 webp 缩略图到对应 `thumbs/` 目录。强制重新生成：
-
-```bash
-npm run thumbs -- --force
 ```
 
 ---
@@ -192,11 +149,11 @@ PORT=3003
 ADMIN_PASS_HASH=<sha256-hash>
 JWT_SECRET=<long-random-secret>
 SQLITE_PATH=./data/lab-homepage.db
-CORS_ORIGIN=https://scs-happycv.github.io
+CORS_ORIGIN=https://www.scs-happycv.top
 UPLOAD_DIR=/var/www/uploads/students
 ```
 
-> 默认端口为 3001，生产环境使用 3003。`vite.config.ts` 的开发代理也指向 3003。
+> 默认端口为 3001，生产环境使用 3003。
 
 生成管理员密码哈希：
 
@@ -252,7 +209,6 @@ cd server && npm test
 |---|---|
 | `npm run dev` | 启动前端开发服务器 |
 | `npm run build` | 构建前端到 `docs/` |
-| `npm run thumbs` | 生成照片墙缩略图 |
 | `npm test` | 运行前端测试 |
 | `cd server && npm run dev` | 启动后端开发服务器 |
 | `cd server && npm run build` | 编译后端 TypeScript |
@@ -265,6 +221,7 @@ cd server && npm test
 ## 注意事项
 
 - `.env` 文件已在 `.gitignore` 中，不要提交敏感信息
-- 图片上传前建议先压缩，照片墙图片需运行 `npm run thumbs` 生成缩略图
+- 成员照片、相册照片由后端上传接口经 Sharp 自动压缩，无需本地脚本
+- `docs/` 是前端构建输出，由 `./restart.sh` 生成并部署到 nginx
 - 成员的电话、微信属于隐私字段，仅在本人同意后公开
 - 定期运行 `npm run db:export` 备份数据库
