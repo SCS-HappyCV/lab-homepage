@@ -11,7 +11,6 @@ import {
   ImageOff,
   ArrowUp,
   ArrowDown,
-  RotateCcw,
   Plus,
   Pencil,
   Save,
@@ -253,34 +252,16 @@ const years = computed(() =>
   Array.from(new Set(albums.value.map((album) => album.year))).sort((a, b) => Number(b) - Number(a)),
 )
 
-const heroGallery = computed(() => {
-  const featured = albums.value.filter((album) => album.featured).slice(0, 3)
-  return featured.length > 0 ? featured : albums.value.slice(0, 3)
-})
+// 顶部背景带：只取精选（featured）相册封面，无精选则留空
+const heroGallery = computed(() => albums.value.filter((album) => album.featured))
 
-// 顶部背景图轮播
-const HERO_SLIDE_INTERVAL = 5000
-const heroSlide = ref(0)
-let heroTimer: ReturnType<typeof setInterval> | null = null
+// 背景带是否暂停移动（鼠标悬停时暂停）
+const heroPaused = ref(false)
 
-function startHeroCarousel() {
-  stopHeroCarousel()
-  if (heroGallery.value.length <= 1) return
-  heroTimer = setInterval(() => {
-    heroSlide.value = (heroSlide.value + 1) % heroGallery.value.length
-  }, HERO_SLIDE_INTERVAL)
-}
-
-function stopHeroCarousel() {
-  if (heroTimer) {
-    clearInterval(heroTimer)
-    heroTimer = null
-  }
-}
-
-watch(heroGallery, (list) => {
-  if (heroSlide.value >= list.length) heroSlide.value = 0
-  startHeroCarousel()
+// 滚动时长随图片数量变化，保证移动速度稳定（约 10s / 张）
+const heroMarqueeStyle = computed(() => {
+  const count = Math.max(heroGallery.value.length, 1)
+  return { animationDuration: `${count * 10}s` }
 })
 
 const filteredAlbums = computed(() => {
@@ -318,14 +299,6 @@ const groupedAlbums = computed(() => {
   return Array.from(groups.entries())
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([year, list]) => ({ year, events: list }))
-})
-
-const activeFiltersCount = computed(() => {
-  let count = 0
-  if (!activeCategories.value.includes(allCategories)) count += activeCategories.value.length
-  if (activeYear.value !== '全部') count += 1
-  if (searchText.value.trim().length > 0) count += 1
-  return count
 })
 
 function toggleCategorySelection(category: string) {
@@ -492,12 +465,10 @@ async function loadAlbums() {
 onMounted(() => {
   void loadAlbums()
   window.addEventListener('keydown', onKeydown)
-  startHeroCarousel()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
-  stopHeroCarousel()
   document.body.style.overflow = ''
 })
 </script>
@@ -505,26 +476,31 @@ onUnmounted(() => {
 <template>
   <main class="gallery-page">
     <section class="gallery-hero" aria-labelledby="gallery-title">
-      <div class="gallery-hero-media">
-        <img
-          v-for="(album, index) in heroGallery"
-          :key="album.id"
-          :src="resolvePhotoUrl(album.coverUrl)"
-          :alt="album.title"
-          decoding="async"
-          :class="{ 'is-active': index === heroSlide }"
-        />
-      </div>
-      <div v-if="heroGallery.length > 1" class="gallery-hero-dots" aria-hidden="true">
-        <button
-          v-for="(album, index) in heroGallery"
-          :key="album.id"
-          type="button"
-          class="gallery-hero-dot"
-          :class="{ active: index === heroSlide }"
-          :aria-label="`切换到第 ${index + 1} 张背景图`"
-          @click="heroSlide = index"
-        ></button>
+      <!-- 精选相册封面横向拼接长带，从左往右缓慢移动 -->
+      <div
+        v-if="heroGallery.length > 0"
+        class="gallery-hero-media"
+        :class="{ paused: heroPaused }"
+        @mouseenter="heroPaused = true"
+        @mouseleave="heroPaused = false"
+      >
+        <div class="gallery-hero-track" :style="heroMarqueeStyle">
+          <!-- 复制两份实现无缝循环 -->
+          <template v-for="batch in 2" :key="batch">
+            <figure
+              v-for="album in heroGallery"
+              :key="`${batch}-${album.id}`"
+              class="gallery-hero-slide"
+            >
+              <img
+                :src="resolvePhotoUrl(album.coverUrl)"
+                :alt="album.title"
+                decoding="async"
+                loading="lazy"
+              />
+            </figure>
+          </template>
+        </div>
       </div>
       <div class="gallery-hero-overlay"></div>
       <div class="gallery-hero-content">
@@ -607,15 +583,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <button
-            v-if="activeFiltersCount > 0"
-            class="login-btn login-btn-cancel filter-reset"
-            type="button"
-            @click="resetFilters"
-          >
-            <RotateCcw :size="14" />
-            清除筛选
-          </button>
         </aside>
 
         <div v-if="isLoading" class="member-groups gallery-groups gallery-empty">

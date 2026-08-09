@@ -852,30 +852,6 @@ h3 {
 
 /* ---- 新增成员按钮 ---- */
 /* ---- 左侧搜索框 ---- */
-.filter-panel-search {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 44px;
-  padding: 0 14px;
-  margin-bottom: 16px;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #ffffff;
-}
-
-.filter-panel-search input {
-  flex: 1;
-  min-width: 0;
-  color: var(--ink);
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: 14px;
-}
-
 .filter-label {
   font-size: 13px;
   font-weight: 700;
@@ -2017,7 +1993,7 @@ h3 {
   gap: 6px;
   flex-shrink: 0;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 17px;
   white-space: nowrap;
 }
 
@@ -2525,6 +2501,7 @@ h3 {
   overflow: hidden;
   color: #ffffff;
   isolation: isolate;
+  background: #0b1513;
 }
 
 .gallery-hero-media,
@@ -2533,54 +2510,47 @@ h3 {
   inset: 0;
 }
 
+/* 横向拼接滚动带 */
 .gallery-hero-media {
   z-index: -2;
+  overflow: hidden;
 }
 
-.gallery-hero-media img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 560px;
-  object-fit: cover;
-  object-position: center 40%;
-  opacity: 0;
-  transition: opacity 1s ease-in-out;
-}
-
-.gallery-hero-media img.is-active {
-  opacity: 1;
-}
-
-.gallery-hero-dots {
-  position: absolute;
-  bottom: 28px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
+.gallery-hero-track {
   display: flex;
-  gap: 8px;
+  width: max-content;
+  height: 100%;
+  animation: heroMarquee linear infinite;
 }
 
-.gallery-hero-dot {
-  width: 9px;
-  height: 9px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(23, 33, 31, 0.3);
-  cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
+.gallery-hero-track .gallery-hero-slide {
+  position: relative;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
 }
 
-.gallery-hero-dot:hover {
-  background: rgba(23, 33, 31, 0.55);
+.gallery-hero-track .gallery-hero-slide img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  min-height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
-.gallery-hero-dot.active {
-  background: var(--ink, #17211f);
-  transform: scale(1.15);
+.gallery-hero-media.paused .gallery-hero-track {
+  animation-play-state: paused;
+}
+
+@keyframes heroMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .gallery-hero-overlay {
