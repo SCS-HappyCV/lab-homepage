@@ -778,34 +778,37 @@ onMounted(() => {
                     </div>
                     <div class="modal-header-text">
                       <div class="modal-name-row">
-                        <h2>{{ selectedMember.name }}</h2>
+                        <div class="member-name-line">
+                          <h2>{{ selectedMember.name }}</h2>
+                          <span v-if="selectedMember.degree" class="member-degree-tag">
+                            {{ selectedMember.degree }}<template v-if="selectedMember.cohort"> · {{ selectedMember.cohort }}级</template>
+                          </span>
+                        </div>
                         <span class="status-badge" :class="selectedMember.status">{{ statusLabel(selectedMember.status) }}</span>
                       </div>
+
+                      <p v-if="selectedMember.advisor" class="modal-info-line">
+                        <GraduationCap :size="15" />
+                        导师：{{ selectedMember.advisor }}
+                      </p>
+
+                      <p
+                        v-if="isMember && selectedMember.status === 'alumni' && selectedMember.destination"
+                        class="modal-info-line modal-info-destination"
+                      >
+                        <BriefcaseBusiness :size="15" />
+                        去向：{{ [parseDestinationDisplay(selectedMember.destination).city, parseDestinationDisplay(selectedMember.destination).unit].filter(Boolean).join('-') }}
+                      </p>
+
                       <div class="modal-native-row">
-                        <p v-if="selectedMember.nativePlace" class="modal-native">
+                        <p v-if="selectedMember.nativePlace" class="modal-info-line">
+                          <MapPin :size="15" />
                           {{ selectedMember.nativePlace }}
                         </p>
-                        <p v-if="isMember && selectedMember.birthDate" class="modal-birth">
-                          <Calendar :size="14" />
+                        <p v-if="isMember && selectedMember.birthDate" class="modal-info-line">
+                          <Calendar :size="15" />
                           {{ selectedMember.birthDate }}
                         </p>
-                      </div>
-                      <div class="modal-degree-row">
-                        <p class="modal-degree">{{ selectedMember.degree }} · {{ selectedMember.cohort }}级</p>
-                        <p v-if="selectedMember.advisor" class="modal-advisor">
-                          <GraduationCap :size="14" />
-                          导师：{{ selectedMember.advisor }}
-                        </p>
-                      </div>
-                    </div>
-                    <div v-if="isMember && selectedMember.status === 'alumni' && selectedMember.destination" class="modal-destination-header">
-                      <div class="destination-line">
-                        <BriefcaseBusiness :size="16" />
-                        <span class="destination-unit">{{ parseDestinationDisplay(selectedMember.destination).unit }}</span>
-                      </div>
-                      <div class="destination-line">
-                        <MapPin :size="16" />
-                        <span class="destination-city">{{ parseDestinationDisplay(selectedMember.destination).city }}</span>
                       </div>
                     </div>
                   </div>
